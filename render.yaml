@@ -5,9 +5,9 @@
 #   1. Set ANTHROPIC_API_KEY (it's marked sync:false below, so Render prompts for it as a secret).
 #   2. Add a Secret File named `earthengine-credentials` whose contents are your local
 #      ~/.config/earthengine/credentials  (created by `earthengine authenticate`).
-#      The start command below copies it into the place the earthengine-api expects, so no
-#      code change is needed. If you skip this, the app still runs — cached real cases and
-#      the Claude chat/agent work; only NEW drawn-zone Sentinel-2 fetches need Earth Engine.
+#      The image entrypoint (docker-entrypoint.sh) copies it into the place earthengine-api
+#      expects, so no code change is needed. If you skip this, the app still runs — cached
+#      real cases and the Claude chat/agent work; only NEW drawn-zone fetches need Earth Engine.
 #
 # Render maps these env vars into Docker build args, so INSTALL_LIVE=1 builds the image with
 # earthengine-api (for live Sentinel-2). The `anthropic` SDK is already in requirements.txt,
@@ -21,12 +21,8 @@ services:
     region: frankfurt          # closest Render region to Lebanon (lower latency)
     healthCheckPath: /api/health
     autoDeploy: true           # redeploy on every push to the connected branch
-    # Place Earth Engine creds (if the Secret File is present), then serve on Render's $PORT.
-    dockerCommand: >-
-      sh -c 'if [ -f /etc/secrets/earthengine-credentials ]; then
-      mkdir -p /root/.config/earthengine &&
-      cp /etc/secrets/earthengine-credentials /root/.config/earthengine/credentials; fi;
-      exec uvicorn app.server:app --host 0.0.0.0 --port ${PORT:-8000}'
+    # No dockerCommand: the image's CMD (docker-entrypoint.sh) binds Render's $PORT and
+    # places the Earth Engine creds Secret File if present.
     envVars:
       - key: INSTALL_LIVE          # build-time: install earthengine-api (live Sentinel-2) into the image
         value: "1"

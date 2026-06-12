@@ -31,10 +31,11 @@ COPY . .
 
 EXPOSE 8000
 
-# Serve the watchroom. We invoke uvicorn directly rather than scripts/run_server.py, which
-# binds 127.0.0.1 and hunts for a free port — inside a container we want a fixed, mappable
-# port listening on all interfaces. app.server:app is the FastAPI instance.
-CMD ["uvicorn", "app.server:app", "--host", "0.0.0.0", "--port", "8000"]
+# Serve the watchroom via the entrypoint script: it serves app.server:app on $PORT (Render
+# injects it; defaults to 8000 locally/compose) and, if a Render Secret File is mounted,
+# places the Earth Engine credentials first. We avoid scripts/run_server.py (it binds
+# 127.0.0.1 + hunts for a free port). Run via `sh` so no executable bit is needed.
+CMD ["sh", "/app/docker-entrypoint.sh"]
 
 # --- Going live (optional) --------------------------------------------------------------
 # The base image is offline. For real imagery + AI, build with INSTALL_LIVE=1 (installs
