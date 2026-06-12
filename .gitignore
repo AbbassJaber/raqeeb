@@ -1,0 +1,33 @@
+# --- Python ---
+__pycache__/
+*.pyc
+.pytest_cache/
+.venv/
+
+# --- secrets / local config ---
+.env
+
+# --- generated output (all auto-created on demand; nothing here is source) ---
+# Dossiers, before/after PNGs, and the reviewer outbox (alert.txt + finding.json).
+outputs/
+!outputs/.gitkeep
+# Throwaway output of ad-hoc "Run"/drawn-zone scans (regenerated on demand).
+web/runs/live/
+
+# --- dev screenshots dropped at the repo root (not used by the app) ---
+/*.png
+/*.jpg
+
+# --- local tooling state ---
+.claude/
+docs/
+# visual-brainstorm scratch
+.superpowers/
+
+# --- OS / editor cruft ---
+.DS_Store
+Thumbs.db
+desktop.ini
+.vscode/
+.idea/
+*.log

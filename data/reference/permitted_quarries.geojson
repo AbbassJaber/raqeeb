@@ -1,0 +1,4 @@
+{"type":"FeatureCollection","features":[
+{"type":"Feature","properties":{"name":"Permitted zone A (synthetic)"},
+"geometry":{"type":"Polygon","coordinates":[[[35.690,33.990],[35.694,33.990],[35.694,33.994],[35.690,33.994],[35.690,33.990]]]}}
+]}

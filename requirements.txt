@@ -1,0 +1,21 @@
+# Core (offline demo runs with just these)
+numpy
+scipy
+shapely
+pyproj
+matplotlib
+reportlab
+pillow
+
+# Agent + UI
+anthropic            # Claude vision, narrative, alert drafting, tool-use orchestration
+streamlit            # demo UI (legacy operator console)
+fastapi              # live cinematic player backend
+uvicorn              # ASGI server for the player (SSE streaming of agent runs)
+
+# Online imagery (your environment; not needed for the offline demo)
+# earthengine-api    # Sentinel-2 via Google Earth Engine
+# geemap             # ee -> numpy helpers
+
+# Dev
+pytest

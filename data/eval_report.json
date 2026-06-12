@@ -1,0 +1,164 @@
+{
+  "generated_at": "2026-06-12T20:09:26+00:00",
+  "mode": "live",
+  "classifier": "deterministic heuristic",
+  "offline_flag": false,
+  "metrics": {
+    "overall": {
+      "n": 10,
+      "tp": 4,
+      "fp": 0,
+      "fn": 1,
+      "tn": 5,
+      "precision": 1.0,
+      "recall": 0.8,
+      "f1": 0.888888888888889,
+      "accuracy": 0.9
+    },
+    "coastal": {
+      "n": 5,
+      "tp": 3,
+      "fp": 0,
+      "fn": 0,
+      "tn": 2,
+      "precision": 1.0,
+      "recall": 1.0,
+      "f1": 1.0,
+      "accuracy": 1.0
+    },
+    "quarry": {
+      "n": 5,
+      "tp": 1,
+      "fp": 0,
+      "fn": 1,
+      "tn": 3,
+      "precision": 1.0,
+      "recall": 0.5,
+      "f1": 0.6666666666666666,
+      "accuracy": 0.8
+    }
+  },
+  "sites": [
+    {
+      "name": "Quarry expansion outside permits (synthetic)",
+      "mode": "quarry",
+      "expected": true,
+      "predicted": false,
+      "label": null,
+      "skipped": true
+    },
+    {
+      "name": "Quarrying inside a permitted zone (synthetic)",
+      "mode": "quarry",
+      "expected": false,
+      "predicted": false,
+      "label": null,
+      "skipped": true
+    },
+    {
+      "name": "Stable inland vegetation (synthetic)",
+      "mode": "quarry",
+      "expected": false,
+      "predicted": false,
+      "label": null,
+      "skipped": true
+    },
+    {
+      "name": "Coastal construction in setback (synthetic)",
+      "mode": "coastal",
+      "expected": true,
+      "predicted": false,
+      "label": null,
+      "skipped": true
+    },
+    {
+      "name": "Stable shoreline (synthetic)",
+      "mode": "coastal",
+      "expected": false,
+      "predicted": false,
+      "label": null,
+      "skipped": true
+    },
+    {
+      "name": "Bourj Hammoud sea landfill (REAL)",
+      "mode": "coastal",
+      "expected": true,
+      "predicted": true,
+      "label": "coastal_construction",
+      "skipped": false
+    },
+    {
+      "name": "Costa Brava coastal landfill (REAL)",
+      "mode": "coastal",
+      "expected": true,
+      "predicted": true,
+      "label": "agriculture",
+      "skipped": false
+    },
+    {
+      "name": "Ain Dara quarrying area (REAL)",
+      "mode": "quarry",
+      "expected": true,
+      "predicted": true,
+      "label": "quarry_expansion",
+      "skipped": false
+    },
+    {
+      "name": "Jbeil hinterland quarries (REAL)",
+      "mode": "quarry",
+      "expected": true,
+      "predicted": false,
+      "label": "agriculture",
+      "skipped": false
+    },
+    {
+      "name": "Jounieh waterfront (REAL)",
+      "mode": "coastal",
+      "expected": true,
+      "predicted": true,
+      "label": "agriculture",
+      "skipped": false
+    },
+    {
+      "name": "Tyre Coast Nature Reserve (REAL, stable)",
+      "mode": "coastal",
+      "expected": false,
+      "predicted": false,
+      "label": null,
+      "skipped": false
+    },
+    {
+      "name": "Mansouri south natural coast (REAL, stable)",
+      "mode": "coastal",
+      "expected": false,
+      "predicted": false,
+      "label": "building",
+      "skipped": false
+    },
+    {
+      "name": "Al-Shouf / Barouk forest interior (REAL, stable)",
+      "mode": "quarry",
+      "expected": false,
+      "predicted": false,
+      "label": null,
+      "skipped": false
+    },
+    {
+      "name": "Horsh Ehden forest reserve (REAL, stable)",
+      "mode": "quarry",
+      "expected": false,
+      "predicted": false,
+      "label": null,
+      "skipped": false
+    },
+    {
+      "name": "Bekaa cropland near Zahle (REAL, stable, hard negative)",
+      "mode": "quarry",
+      "expected": false,
+      "predicted": false,
+      "label": "building",
+      "skipped": false
+    }
+  ],
+  "note": "Labels are expert assessment from visible Sentinel-2 change + known context, not field-verified. Deterministic detector+legality first-pass (no AI second opinion, no human review) unless --llm."
+}

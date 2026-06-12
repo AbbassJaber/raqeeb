@@ -1,0 +1,39 @@
+{
+  "region": {
+    "id": "R257",
+    "area_ha": 21.92,
+    "centroid": [
+      35.554684,
+      33.902338
+    ],
+    "geo_bbox": [
+      35.552047,
+      33.898961,
+      35.556734,
+      33.905445
+    ],
+    "pixel_bbox": [
+      109,
+      128,
+      192,
+      178
+    ],
+    "ndvi_drop": -0.396,
+    "bsi_rise": 0.198
+  },
+  "classification": {
+    "label": "quarry_expansion",
+    "confidence": 0.72,
+    "reasoning": "The before image shows a dark area with minimal visible features, while the after image reveals exposed light-colored rocky/sandy terrain with what appears to be excavated material and infrastructure. This pattern of dark vegetated/undisturbed land transitioning to bright exposed rock/earth with rectangular cut features is characteristic of quarry expansion, which is common in Lebanon's mountainous regions.",
+    "source": "claude"
+  },
+  "flags": [
+    "within the coastal public-domain setback",
+    "quarry-like change outside any permitted zone"
+  ],
+  "nearest_place": "Bourj Hammoud, Beirut",
+  "mode": "coastal",
+  "detected_window": "2017-04-01..2017-10-31 -> 2024-05-01..2024-09-30",
+  "dossier_path": "C:\\Users\\AbbassJaber\\Repos\\raqeeb\\web\\runs\\bourj-hammoud\\dossier_R257.pdf",
+  "is_violation": true
+}

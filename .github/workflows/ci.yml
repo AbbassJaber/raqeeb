@@ -1,0 +1,48 @@
+name: CI
+
+# Offline-only CI: the test suite and the Docker image both run with no keys and no
+# network (RAQEEB_OFFLINE=1), so nothing here needs secrets.
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  tests:
+    name: pytest (offline)
+    runs-on: ubuntu-latest
+    env:
+      RAQEEB_OFFLINE: "1"
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+      - name: Run tests
+        run: pytest -q
+
+  docker:
+    name: docker build + boot smoke test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build offline image
+        run: docker build -t raqeeb:offline .
+      - name: Server boots and answers /api/health
+        run: |
+          docker run -d --name raqeeb -p 8000:8000 raqeeb:offline
+          for i in $(seq 1 30); do
+            if curl -fsS http://localhost:8000/api/health; then echo " — healthy"; exit 0; fi
+            sleep 2
+          done
+          echo "::error::server did not become healthy in time"
+          docker logs raqeeb
+          exit 1
+      - name: Tear down
+        if: always()
+        run: docker rm -f raqeeb || true

@@ -1,0 +1,199 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Raqeeb</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700&family=Spline+Sans+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+<link rel="stylesheet" href="https://unpkg.com/leaflet-draw@1.0.4/dist/leaflet.draw.css">
+<link rel="stylesheet" href="styles.css">
+<script defer src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script defer src="https://unpkg.com/leaflet-draw@1.0.4/dist/leaflet.draw.js"></script>
+</head>
+<body data-beat="0" class="view-home">
+  <header class="topbar">
+    <div class="brand">
+      <div class="name"><b>RAQEEB</b></div>
+      <div class="kicker">Environmental monitoring · Lebanon</div>
+      <div class="livebadge mono" id="liveBadge"></div>
+    </div>
+    <div class="controls">
+      <button id="toOverview" class="btn ghost case-ctrl" title="Back to the map">◰ Watchroom</button>
+      <select id="picker" class="picker mono hidden-ctrl" aria-label="Select site"></select>
+      <button id="run" class="btn case-ctrl" title="Run the agent live on this site, step by step">⚡ Run analysis</button>
+      <button id="helpBtn" class="btn ghost" title="What is this?" aria-label="Help">?</button>
+      <span class="status mono" id="status"><span class="dot"></span>WATCHING</span>
+    </div>
+  </header>
+
+  <!-- HOME · the watchroom: ranked candidate queue + national map -->
+  <section class="watchroom" id="overview" hidden>
+    <aside class="queue" id="queue">
+      <div class="queue-head"><h4>Candidates</h4><span class="queue-count mono" id="queueCount">—</span></div>
+      <div class="queue-summary mono" id="queueSummary"></div>
+      <div class="queue-eval mono" id="evalBadge" title="Measured accuracy on a labelled real-site set"></div>
+      <div class="queue-hint" id="queueHint">Click a site to inspect it · or draw a box (▢ on the map) / ask Raqeeb to scan a new area.</div>
+      <div class="queue-list" id="queueList"></div>
+      <button class="btn scan" id="scanBtn">＋ Scan a new area</button>
+      <div class="queue-foot mono">Each is a candidate for human verification — never an accusation. Boundaries are proxies.</div>
+    </aside>
+    <div class="map-wrap">
+      <div id="map"></div>
+      <div class="draw-hud mono" id="drawHud" hidden></div>
+      <div class="map-legend mono">
+        <div class="ml-title">Severity</div>
+        <span class="ml critical"><i></i>critical</span>
+        <span class="ml high"><i></i>high</span>
+        <span class="ml medium"><i></i>medium</span>
+        <span class="ml low"><i></i>low</span>
+      </div>
+      <div class="map-caption mono">Click a pin or a card · draw a <b>2–3 km</b> box (▢ top-left) to scan a new zone live.</div>
+    </div>
+  </section>
+
+  <!-- CASE FILE · one candidate in depth -->
+  <div id="runview" hidden>
+    <div class="case-head">
+      <div class="case-id">
+        <span class="case-title" id="caseTitle">—</span>
+        <span class="case-sub mono" id="caseSub"></span>
+      </div>
+      <span class="sev-chip mono" id="sevChip">—</span>
+    </div>
+    <div class="case-facts mono" id="caseFacts"></div>
+
+    <main class="console">
+      <aside class="analysis">
+        <aside class="rail mono" id="rail">
+          <div class="ph" data-phase="perceive">Perceive</div>
+          <div class="sub" data-step="fetch">fetch imagery</div>
+          <div class="sub" data-step="align">align composites</div>
+          <div class="ph" data-phase="reason">Reason</div>
+          <div class="sub" data-step="detect">detect change</div>
+          <div class="sub" data-step="classify">classify</div>
+          <div class="sub" data-step="legality">check legality</div>
+          <div class="ph" data-phase="act">Act</div>
+          <div class="sub" data-step="dossier">compile dossier</div>
+          <div class="sub" data-step="alert">draft alert</div>
+        </aside>
+        <aside class="panel telemetry mono" id="telemetry">
+          <h4>Telemetry</h4>
+          <div class="row"><span>NDVI</span><span id="ndvi">—</span></div>
+          <div class="row"><span>BSI</span><span id="bsi">—</span></div>
+          <div class="row"><span>Area</span><span id="area">—</span></div>
+          <div class="cls" id="clsLabel">—</div>
+          <div class="bar"><i id="confBar"></i></div>
+          <div class="muted" id="confText">—</div>
+        </aside>
+      </aside>
+
+      <section class="stage" id="stage">
+        <div class="sweep"></div>
+        <img class="layer before" id="imgBefore" alt="before">
+        <img class="layer after" id="imgAfter" alt="after">
+        <svg class="overlays" id="overlays" viewBox="0 0 100 100" preserveAspectRatio="none"></svg>
+        <div class="divider" id="divider"></div>
+        <div class="tag before-tag mono" id="beforeTag">BEFORE</div>
+        <div class="tag after-tag mono" id="afterTag">AFTER</div>
+        <div class="changebox" id="box"><span class="box-lbl mono" id="boxLbl"></span></div>
+        <div class="legend mono">10 m · EPSG:32636 geometry · cloud-masked composite</div>
+        <div class="stage-loading mono" id="stageLoading" hidden><span class="spin"></span>analysing imagery…</div>
+        <div class="stage-msg mono" id="stageMsg" hidden></div>
+      </section>
+
+      <aside class="sidecol">
+        <div class="sev-row">
+          <section class="panel ts" id="ts" hidden>
+            <div class="ts-head">
+              <h4>Onset · change over time</h4>
+              <span class="ts-onset mono" id="tsOnset">—</span>
+            </div>
+            <svg class="ts-spark" id="tsSpark" viewBox="0 0 100 30" preserveAspectRatio="none"></svg>
+            <div class="ts-controls">
+              <input type="range" id="tsSlider" min="0" max="0" value="0" step="1" aria-label="Year">
+              <span class="ts-readout mono" id="tsReadout">—</span>
+            </div>
+          </section>
+          <section class="panel sev mono" id="sevPanel">
+            <h4>Severity</h4>
+            <div class="sev-score"><b id="sevScore">—</b><span class="sev-tier" id="sevTier"></span></div>
+            <div class="sev-bar"><i id="sevBar"></i></div>
+            <div class="sev-factors" id="sevFactors"></div>
+          </section>
+        </div>
+        <div class="act-row">
+          <section class="panel reasoning mono" id="reasoning">
+            <h4>✦ Agent reasoning</h4>
+            <div class="log-lines mono" id="log"></div>
+          </section>
+          <section class="panel evidence mono" id="evidence">
+            <h4>Review &amp; act</h4>
+            <div class="evidence-files">
+              <a class="file" id="dossierLink" href="#" target="_blank" rel="noopener">▤ dossier</a>
+            </div>
+            <div class="draft" id="draft">✉ Alert drafted — not sent</div>
+            <label class="rev-check"><input type="checkbox" id="reviewedChk">
+              I have reviewed this candidate against official records.</label>
+            <button class="btn prepare" id="prepareBtn" disabled>Prepare alert for reviewer</button>
+            <div class="rev-status mono" id="revStatus"></div>
+            <div class="field-review" id="fieldReview">
+              <div class="fr-head">After the team checks onsite</div>
+              <div class="fr-btns">
+                <button class="fr-btn cleared" id="frClear">✓ Verified normal</button>
+                <button class="fr-btn confirmed" id="frConfirm">⚠ Confirmed</button>
+              </div>
+              <div class="fr-status mono" id="frStatus"></div>
+            </div>
+            <div class="disclaimer" id="disclaimer">Candidate for human verification — not a legal
+              determination. Boundaries are proxies; confirm against official records.</div>
+          </section>
+        </div>
+      </aside>
+    </main>
+  </div>
+
+  <!-- executive copilot: grounded Q&A over the current candidates -->
+  <aside class="chat" id="chat" aria-label="Ask Raqeeb">
+    <div class="chat-head">
+      <h4>✦ Ask Raqeeb</h4>
+      <button class="chat-close" id="chatClose" aria-label="Close">✕</button>
+    </div>
+    <div class="chat-log" id="chatLog"></div>
+    <div class="chat-suggest" id="chatSuggest">
+      <button class="chip">What needs my attention?</button>
+      <button class="chip">How many are critical?</button>
+      <button class="chip">Anything on the coast near Beirut?</button>
+      <button class="chip">Summarize the Bourj Hammoud case.</button>
+    </div>
+    <form class="chat-input" id="chatForm">
+      <input id="chatInput" placeholder="Ask about the findings…" autocomplete="off">
+      <button class="btn" id="chatSend" type="submit" aria-label="Send">➤</button>
+    </form>
+    <div class="chat-foot mono">Grounded in current candidates — for human review, never an accusation.</div>
+  </aside>
+  <button class="chat-fab" id="chatFab" title="Ask Raqeeb AI" aria-label="Ask Raqeeb">✦</button>
+
+  <!-- first-run guide: what this is + the 3-step flow + the responsible-AI framing -->
+  <div class="intro" id="intro" hidden>
+    <div class="intro-card">
+      <div class="intro-kicker mono">Environmental monitoring · Lebanon</div>
+      <h2><b>RAQEEB</b> watches Lebanon from space</h2>
+      <p>An AI agent scans Sentinel-2 satellite imagery for likely environmental violations —
+         illegal quarrying and coastal encroachment — and reasons about whether each change breaks a rule.</p>
+      <ol class="intro-steps">
+        <li><b>Pick a candidate</b> on the map or list — or draw a box / ask Raqeeb to scan a new area.</li>
+        <li><b>Watch the agent analyze it</b> live: detect change → classify with vision → check the law.</li>
+        <li><b>Review the evidence</b> and prepare an alert for a human reviewer.</li>
+      </ol>
+      <p class="intro-note">Every result is a <b>candidate for human verification — never an accusation</b>.
+         Boundaries are proxies; alerts are drafted for a person to send, never automatically.</p>
+      <button class="btn intro-start" id="introStart">Enter the watchroom →</button>
+    </div>
+  </div>
+
+  <script defer src="app.js"></script>
+</body>
+</html>

@@ -1,0 +1,34 @@
+# Keep the build context small and the image clean. Anything here is NOT copied by
+# `COPY . .`. The cached demo bundles under web/runs/ are deliberately NOT ignored —
+# they make the offline demo work — except the throwaway live-scan output.
+
+# Local virtualenv (large; the image installs its own from requirements.txt)
+.venv/
+
+# Python caches / compiled files
+__pycache__/
+*.pyc
+*.pyo
+
+# Git + editor + CI metadata
+.git/
+.gitignore
+.github/
+
+# Secrets — never bake into an image; pass at runtime instead
+.env
+
+# Regenerated at runtime (dossiers, alert outbox)
+outputs/
+
+# Throwaway output of ad-hoc "Run" / drawn-zone scans
+web/runs/live/
+
+# Tests + scratch (not needed to serve)
+tests/
+.superpowers/
+.pytest_cache/
+
+# Dev screenshots dropped at the repo root
+/*.png
+/*.jpg

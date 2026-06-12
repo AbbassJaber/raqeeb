@@ -1,0 +1,7 @@
+# Orbital Command theme for the Raqeeb Streamlit app (matches the cinematic demo).
+[theme]
+base = "dark"
+primaryColor = "#6ea8fe"
+backgroundColor = "#0b1220"
+secondaryBackgroundColor = "#0c1526"
+textColor = "#dbe4f0"

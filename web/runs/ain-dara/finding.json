@@ -1,0 +1,38 @@
+{
+  "region": {
+    "id": "R020",
+    "area_ha": 1.82,
+    "centroid": [
+      35.716108,
+      33.765629
+    ],
+    "geo_bbox": [
+      35.715469,
+      33.765061,
+      35.716719,
+      33.765998
+    ],
+    "pixel_bbox": [
+      119,
+      119,
+      135,
+      139
+    ],
+    "ndvi_drop": 0.402,
+    "bsi_rise": 0.325
+  },
+  "classification": {
+    "label": "agriculture",
+    "confidence": 0.55,
+    "reasoning": "The before image shows dense green vegetation/forest cover, while the after image shows cleared land with exposed soil/earth tones. This pattern is consistent with agricultural land clearing or deforestation for farming purposes, where natural vegetation has been removed to prepare land for cultivation.",
+    "source": "claude"
+  },
+  "flags": [
+    "overlaps Shouf Biosphere Reserve (protected area)"
+  ],
+  "nearest_place": "Ain Dara, Mount Lebanon",
+  "mode": "quarry",
+  "detected_window": "2018-05-01..2018-09-30 -> 2024-05-01..2024-09-30",
+  "dossier_path": "C:\\Users\\AbbassJaber\\Repos\\raqeeb\\web\\runs\\ain-dara\\dossier_R020.pdf",
+  "is_violation": true
+}

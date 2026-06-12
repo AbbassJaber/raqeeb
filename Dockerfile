@@ -1,0 +1,45 @@
+# Raqeeb — satellite monitoring agent. Containerised demo server (the FastAPI + SSE watchroom).
+#
+# Builds an OFFLINE-by-default image: the cached real cases (Bourj Hammoud, Costa Brava,
+# Jounieh) and the synthetic pipeline run with no keys and no network, so the demo can't
+# die. For the LIVE path (real Sentinel-2 + Gemini) see the notes at the bottom.
+FROM python:3.12-slim
+
+# Unbuffered stdout so SSE/agent logs stream out immediately; no .pyc clutter.
+ENV PYTHONUNBUFFERED=1 \
+    PYTHONDONTWRITEBYTECODE=1 \
+    RAQEEB_OFFLINE=1
+
+WORKDIR /app
+
+# Install deps first so this layer is cached unless requirements.txt changes. numpy/
+# scipy/shapely/pyproj/matplotlib/pillow all ship manylinux wheels, so no system
+# GEOS/PROJ or build toolchain is needed on slim.
+COPY requirements.txt .
+RUN pip install --no-cache-dir -r requirements.txt
+
+# Optionally bake in the LIVE deps (real Sentinel-2 via Earth Engine + Gemini vision).
+# Off by default to keep the offline image lean; the compose `live` profile builds with
+# --build-arg INSTALL_LIVE=1. These are intentionally NOT in requirements.txt.
+ARG INSTALL_LIVE=0
+RUN if [ "$INSTALL_LIVE" = "1" ]; then pip install --no-cache-dir google-genai earthengine-api; fi
+
+# App code. The .dockerignore keeps .venv/, outputs/, caches and scratch out of the image,
+# while the cached demo bundles under web/runs/ are included so the demo works offline.
+COPY . .
+
+EXPOSE 8000
+
+# Serve the watchroom. We invoke uvicorn directly rather than scripts/run_server.py, which
+# binds 127.0.0.1 and hunts for a free port — inside a container we want a fixed, mappable
+# port listening on all interfaces. app.server:app is the FastAPI instance.
+CMD ["uvicorn", "app.server:app", "--host", "0.0.0.0", "--port", "8000"]
+
+# --- Going live (optional) --------------------------------------------------------------
+# The base image is offline. For real imagery + AI, install the live deps (not in
+# requirements.txt) and pass credentials at runtime — e.g. add to the build:
+#   RUN pip install --no-cache-dir google-genai earthengine-api
+# then run with a Gemini key, a GCP project, and your Earth Engine credentials mounted:
+#   docker run -p 8000:8000 \
+#     -e RAQEEB_OFFLINE=0 -e GEMINI_API_KEY=... -e EARTHENGINE_PROJECT=<gcp-project> \
+#     -v "$HOME/.config/earthengine:/root/.config/earthengine:ro" raqeeb

@@ -1,0 +1,38 @@
+{
+  "region": {
+    "id": "R003",
+    "area_ha": 56.13,
+    "centroid": [
+      35.479338,
+      33.820207
+    ],
+    "geo_bbox": [
+      35.476379,
+      33.812223,
+      35.48248,
+      33.823965
+    ],
+    "pixel_bbox": [
+      0,
+      97,
+      167,
+      168
+    ],
+    "ndvi_drop": -0.267,
+    "bsi_rise": 0.213
+  },
+  "classification": {
+    "label": "coastal_construction",
+    "confidence": 0.92,
+    "reasoning": "The before image shows a coastal area with water (dark green/blue) and a small sandy shoreline with minimal development. The after image shows significant land reclamation and construction activity with exposed earth/sand fill material, indicating coastal construction or land reclamation project has taken place at this Lebanese coastal location.",
+    "source": "claude"
+  },
+  "flags": [
+    "within the coastal public-domain setback"
+  ],
+  "nearest_place": "Costa Brava, south Beirut",
+  "mode": "coastal",
+  "detected_window": "2017-04-01..2017-10-31 -> 2024-05-01..2024-09-30",
+  "dossier_path": "C:\\Users\\AbbassJaber\\Repos\\raqeeb\\web\\runs\\costa-brava\\dossier_R003.pdf",
+  "is_violation": true
+}

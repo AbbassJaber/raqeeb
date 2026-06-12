@@ -1,0 +1,277 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Raqeeb · رقيب — the watcher</title>
+<meta name="description" content="An AI agent that watches Lebanon from space, flags likely environmental violations, reasons about whether each breaks a rule, and hands a human a ready-to-review evidence file. Candidate, never accusation.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=Spline+Sans+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="landing.css">
+</head>
+<body>
+
+<!-- atmosphere: starfield + orbital grid (fixed, behind everything) -->
+<div class="space" aria-hidden="true">
+  <div class="stars"></div>
+  <div class="grid-glow"></div>
+</div>
+
+<!-- nav -->
+<header class="nav">
+  <a class="wordmark" href="#top">
+    <span class="mark">RAQEEB</span><span class="ar">رقيب</span>
+  </a>
+  <nav class="nav-links mono">
+    <a href="#how">How it works</a>
+    <a href="#responsible">Responsible</a>
+    <a href="#scale">Scale</a>
+  </nav>
+  <a class="btn primary" href="/">Enter the watchroom <span class="arr">→</span></a>
+</header>
+
+<main id="top">
+
+  <!-- ░░ HERO ░░ -->
+  <section class="hero">
+    <div class="hero-copy">
+      <div class="badge mono reveal"><span class="pulse-dot"></span>LIVE · SENTINEL-2 + AI</div>
+      <h1 class="reveal">
+        Something is<br><span class="accent">watching</span> Lebanon.
+      </h1>
+      <p class="lede reveal">
+        An AI agent watches Lebanon from space for <strong>illegal quarrying</strong> and
+        <strong>coastal encroachment</strong>, reasons about whether each change breaks a rule —
+        and hands a human the evidence. <strong>Candidate, never accusation.</strong>
+      </p>
+      <div class="hero-cta reveal">
+        <a class="btn primary lg" href="/">Enter the watchroom <span class="arr">→</span></a>
+        <a class="btn ghost lg" href="#how">See how it works</a>
+      </div>
+      <div class="hero-meta mono reveal">رقيب — Arabic for “the watcher”</div>
+    </div>
+
+    <!-- the signature: real Sentinel-2 before/after swipe -->
+    <figure class="scope reveal" id="scope" aria-label="Bourj Hammoud coastline, 2020 versus 2025">
+      <div class="scope-frame">
+        <img class="scope-img before" src="runs/bourj-hammoud/before.png" alt="Bourj Hammoud coast, 2020" draggable="false">
+        <img class="scope-img after"  src="runs/bourj-hammoud/after.png"  alt="Bourj Hammoud coast, 2025 — sea landfill" draggable="false">
+        <svg class="scope-anno" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true">
+          <polyline class="shore" points="60,8 58,30 62,52 57,74 60,96"></polyline>
+          <polyline class="setback" points="68,8 66,30 70,52 65,74 68,96"></polyline>
+        </svg>
+        <div class="scope-divider" id="scopeDiv"><span class="grip"></span></div>
+        <span class="scope-tag tl mono">2020</span>
+        <span class="scope-tag tr mono">2025</span>
+        <span class="anno-lbl shore-lbl mono">original shoreline</span>
+        <span class="anno-lbl setback-lbl mono">150 m public-domain setback</span>
+        <div class="scan"></div>
+      </div>
+      <figcaption class="mono">Real Sentinel-2 imagery · Bourj Hammoud · drag to compare</figcaption>
+    </figure>
+
+    <a class="scrollcue mono" href="#problem" aria-label="Scroll">SCROLL ↓</a>
+  </section>
+
+  <!-- ░░ PROBLEM ░░ -->
+  <section class="band problem" id="problem">
+    <div class="band-inner">
+      <p class="kicker mono reveal">The problem</p>
+      <h2 class="reveal">Nobody can see it all.</h2>
+      <div class="stats">
+        <div class="stat reveal">
+          <div class="stat-num mono" data-count="1000" data-suffix="+">0</div>
+          <div class="stat-lbl">unlicensed quarries gutting the mountains</div>
+        </div>
+        <div class="stat reveal">
+          <div class="stat-num mono" data-count="220" data-suffix=" km">0</div>
+          <div class="stat-lbl">of coastline — opaque permits, no eyes</div>
+        </div>
+        <div class="stat reveal">
+          <div class="stat-num mono" data-count="0">0</div>
+          <div class="stat-lbl">continuous monitoring — until now</div>
+        </div>
+      </div>
+      <p class="band-note reveal">
+        Satellites already photograph this coast <strong>every five days, for free</strong>,
+        at 10-metre resolution. The imagery was always there. What was missing is something
+        that actually <em>watches</em> it — and reasons about what it sees.
+      </p>
+    </div>
+  </section>
+
+  <!-- ░░ HOW IT WORKS — the agent loop ░░ -->
+  <section class="band how" id="how">
+    <div class="band-inner">
+      <p class="kicker mono reveal">How it works · it's a real agent</p>
+      <h2 class="reveal">One instruction. Perceive → reason → act.</h2>
+      <p class="band-sub reveal">
+        From a single instruction, Raqeeb chooses and sequences its own tools, narrating its
+        reasoning at every step. Not a chatbot, not a fixed script — the model decides each move.
+      </p>
+
+      <div class="loop reveal" role="img" aria-label="Agent pipeline: imagery, detect, classify, legality, dossier, alert">
+        <div class="agent-node mono"><span>AGENT</span></div>
+        <svg class="loop-wire" viewBox="0 0 1000 60" preserveAspectRatio="none" aria-hidden="true">
+          <line class="wire" x1="20" y1="30" x2="980" y2="30"></line>
+        </svg>
+        <ol class="steps">
+          <li class="step" data-phase="perceive"><span class="dot"></span><span class="s-name">fetch imagery</span><span class="s-ph mono">perceive</span></li>
+          <li class="step" data-phase="reason"><span class="dot"></span><span class="s-name">detect change</span><span class="s-ph mono">reason</span></li>
+          <li class="step" data-phase="reason"><span class="dot"></span><span class="s-name">classify (vision)</span><span class="s-ph mono">reason</span></li>
+          <li class="step" data-phase="reason"><span class="dot"></span><span class="s-name">check legality</span><span class="s-ph mono">reason</span></li>
+          <li class="step" data-phase="act"><span class="dot"></span><span class="s-name">compile dossier</span><span class="s-ph mono">act</span></li>
+          <li class="step" data-phase="act"><span class="dot"></span><span class="s-name">draft alert</span><span class="s-ph mono">act</span></li>
+        </ol>
+      </div>
+
+      <div class="how-grid">
+        <div class="how-card reveal">
+          <h3>Deterministic where it counts</h3>
+          <p>Area, distance and the setback intersection are computed in a metric projection
+             (EPSG:32636) on same-season, cloud-masked composites. Math, not a screenshot.</p>
+        </div>
+        <div class="how-card reveal">
+          <h3>AI where it helps</h3>
+          <p>A vision model reads the before/after crop and names the change; a second,
+             skeptical model double-checks it for cloud, tide or harvest. It doesn't cry wolf.</p>
+        </div>
+        <div class="how-card reveal">
+          <h3>Always finishes</h3>
+          <p>Every AI step has a deterministic fallback, so a run always completes — and cached
+             real cases render even with no network.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ░░ TWO THREATS, ONE AGENT ░░ -->
+  <section class="band case" id="case">
+    <div class="band-inner">
+      <p class="kicker mono reveal">Two threats · one agent</p>
+      <h2 class="reveal">Quarrying and coastal encroachment —<br>caught the same way.</h2>
+      <p class="band-sub reveal">
+        One pipeline, a swappable detector per mode. Real Sentinel-2 imagery, 2020 versus 2025 —
+        same-season and cloud-masked, with the geometry computed in a metric projection (EPSG:32636).
+      </p>
+      <div class="case-cards">
+        <!-- coastal -->
+        <article class="case-card reveal">
+          <div class="cc-frame">
+            <img src="runs/bourj-hammoud/after.png" alt="Bourj Hammoud sea landfill, 2025" draggable="false">
+            <span class="cc-tag coastal mono">Coastal encroachment</span>
+            <span class="cc-grid mono">10 m · EPSG:32636 · cloud-masked</span>
+          </div>
+          <div class="cc-body">
+            <h3 class="cc-title">Bourj Hammoud · sea landfill</h3>
+            <p class="cc-facts">~22 ha · classified <strong>coastal construction</strong> ·
+              <span class="flag">within the 150 m public-domain setback</span></p>
+            <div class="sev">
+              <div class="sev-head"><span class="sev-tier mono">SEVERITY · HIGH</span><span class="sev-score mono"><b>72</b>/100</span></div>
+              <div class="sev-bar"><i style="--w:72%"></i></div>
+              <ul class="sev-factors mono">
+                <li><span>within the coastal public-domain setback</span><span>+30</span></li>
+                <li><span>change area 22 ha</span><span>+20</span></li>
+                <li><span>signal + classifier confidence</span><span>+22</span></li>
+              </ul>
+            </div>
+          </div>
+        </article>
+        <!-- quarry -->
+        <article class="case-card reveal">
+          <div class="cc-frame">
+            <img src="runs/ain-dara/after.png" alt="Ain Dara quarry, 2025" draggable="false">
+            <span class="cc-tag quarry mono">Illegal quarrying</span>
+            <span class="cc-grid mono">10 m · EPSG:32636 · cloud-masked</span>
+          </div>
+          <div class="cc-body">
+            <h3 class="cc-title">Ain Dara · Mount Lebanon</h3>
+            <p class="cc-facts">~1.8 ha bare-rock expansion · classified <strong>quarry expansion</strong> ·
+              <span class="flag">outside any permitted zone</span></p>
+            <div class="sev quarry-sev">
+              <div class="sev-head"><span class="sev-tier mono">SEVERITY · MEDIUM</span><span class="sev-score mono"><b>48</b>/100</span></div>
+              <div class="sev-bar"><i style="--w:48%"></i></div>
+              <ul class="sev-factors mono">
+                <li><span>quarry change outside any permitted zone</span><span>+25</span></li>
+                <li><span>change area 1.8 ha</span><span>+7</span></li>
+                <li><span>signal + classifier confidence</span><span>+16</span></li>
+              </ul>
+            </div>
+          </div>
+        </article>
+      </div>
+      <p class="sev-note mono reveal case-foot">Severity is scored transparently — every point explained. Every site is a candidate for human review; boundaries are proxies.</p>
+    </div>
+  </section>
+
+  <!-- ░░ RESPONSIBLE ░░ -->
+  <section class="band responsible" id="responsible">
+    <div class="band-inner center">
+      <p class="kicker mono reveal">The line we won't cross</p>
+      <h2 class="big reveal">Candidate for human verification.<br><span class="accent">Never an accusation. Never auto-sent.</span></h2>
+      <div class="pledge">
+        <div class="pledge-card reveal">
+          <span class="pledge-ic mono">01</span>
+          <p>It never names a person and never reaches a verdict. Every output is a candidate for a human to verify.</p>
+        </div>
+        <div class="pledge-card reveal">
+          <span class="pledge-ic mono">02</span>
+          <p>A person ticks “I reviewed this” before anything is prepared for a reviewer. The agent can only draft.</p>
+        </div>
+        <div class="pledge-card reveal">
+          <span class="pledge-ic mono">03</span>
+          <p>It doesn't cry wolf. Shown a stable, protected site — the Barouk cedar forest — the agent reviewed it and chose <em>not</em> to flag it.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ░░ SCALE ░░ -->
+  <section class="band scale" id="scale">
+    <div class="band-inner scale-inner">
+      <div class="scale-copy">
+        <p class="kicker mono reveal">Scale</p>
+        <h2 class="reveal">One bay today.<br>The whole coast tomorrow.</h2>
+        <p class="band-sub reveal">
+          The imagery is free and global. The same agent, on a schedule, can watch all
+          <strong>220 kilometres</strong> of coastline and every mountain quarry — tirelessly,
+          for almost nothing. Built for the people already doing this by hand: environmental
+          NGOs, investigative journalists, and the Ministry of Environment.
+        </p>
+      </div>
+      <div class="scale-map reveal" aria-hidden="true">
+        <svg viewBox="0 0 200 360" class="coast">
+          <path class="coastline" d="M120 8 C110 50 132 80 118 120 C104 160 130 195 112 235 C98 270 124 300 110 352"></path>
+        </svg>
+        <span class="pin crit" style="--x:62%;--y:24%"></span>
+        <span class="pin high" style="--x:55%;--y:38%"></span>
+        <span class="pin crit" style="--x:58%;--y:50%"></span>
+        <span class="pin med"  style="--x:50%;--y:62%"></span>
+        <span class="pin high" style="--x:57%;--y:72%"></span>
+        <span class="pin low"  style="--x:52%;--y:84%"></span>
+        <span class="pin high" style="--x:60%;--y:14%"></span>
+      </div>
+    </div>
+  </section>
+
+  <!-- ░░ CTA / FOOTER ░░ -->
+  <footer class="closing" id="closing">
+    <div class="closing-inner">
+      <h2 class="reveal">The coast belongs to everyone.<br>Now, finally, something is watching.</h2>
+      <a class="btn primary lg reveal" href="/">Enter the watchroom <span class="arr">→</span></a>
+      <div class="foot-mark reveal">
+        <span class="mark">RAQEEB</span><span class="ar">رقيب</span>
+        <span class="foot-tag mono">the watcher · environmental monitoring · Lebanon</span>
+      </div>
+      <p class="foot-fine mono reveal">
+        Every output is a candidate for human verification. Boundaries are proxies. Alerts are drafted, never sent automatically.
+      </p>
+    </div>
+  </footer>
+
+</main>
+
+<script type="module" src="landing.js"></script>
+</body>
+</html>

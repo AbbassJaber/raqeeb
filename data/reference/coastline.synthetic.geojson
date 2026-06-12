@@ -1,0 +1,24 @@
+{"type":"FeatureCollection","features":[
+{"type":"Feature","properties":{"name":"Lebanon coastline (approximate proxy, S->N through coastal cities)","source":"hand-traced from public coastal city coordinates; coarse proxy for the public maritime domain — confirm against official cadastral data"},
+"geometry":{"type":"LineString","coordinates":[
+[35.108,33.090],
+[35.140,33.120],
+[35.190,33.270],
+[35.235,33.350],
+[35.270,33.450],
+[35.370,33.560],
+[35.400,33.660],
+[35.440,33.730],
+[35.470,33.810],
+[35.480,33.890],
+[35.560,33.910],
+[35.605,33.955],
+[35.620,33.980],
+[35.630,34.030],
+[35.640,34.120],
+[35.655,34.250],
+[35.710,34.300],
+[35.800,34.430],
+[35.960,34.490]
+]}}
+]}

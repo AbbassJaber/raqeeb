@@ -1,0 +1,172 @@
+{
+  "_comment": "Labelled validation set for the accuracy harness. Offline sites carry a 'truth_imagery' key (quarry|coastal|stable) and run deterministically with no keys (the synthetic sanity set). REAL sites omit 'truth_imagery' (real bbox + windows + expect_violation) and run with --live (needs Earth Engine auth + RAQEEB_OFFLINE=0). expect_violation is the ground truth: should the system raise a candidate-violation flag? Labels are expert assessment from visible Sentinel-2 change + known context; provenance per site. They are NOT field-verified — the onsite-verdict loop in the watchroom is how field-verified ground truth gets fed back. Same-season (summer) before/after windows throughout.",
+  "sites": [
+    {
+      "name": "Quarry expansion outside permits (synthetic)",
+      "mode": "quarry",
+      "truth_imagery": "quarry",
+      "bbox": [35.69, 33.99, 35.71, 34.01],
+      "before_window": "2019-05-01..2019-09-30",
+      "after_window": "2024-05-01..2024-09-30",
+      "grid": 200,
+      "nearest_place": "Mount Lebanon (demo)",
+      "expect_violation": true
+    },
+    {
+      "name": "Quarrying inside a permitted zone (synthetic)",
+      "mode": "quarry",
+      "truth_imagery": "quarry",
+      "bbox": [35.690, 33.990, 35.694, 33.994],
+      "before_window": "2019-05-01..2019-09-30",
+      "after_window": "2024-05-01..2024-09-30",
+      "grid": 200,
+      "nearest_place": "Permitted zone A (demo)",
+      "expect_violation": false
+    },
+    {
+      "name": "Stable inland vegetation (synthetic)",
+      "mode": "quarry",
+      "truth_imagery": "stable",
+      "bbox": [35.69, 33.99, 35.71, 34.01],
+      "before_window": "2019-05-01..2019-09-30",
+      "after_window": "2024-05-01..2024-09-30",
+      "grid": 200,
+      "nearest_place": "Mount Lebanon (demo)",
+      "expect_violation": false
+    },
+    {
+      "name": "Coastal construction in setback (synthetic)",
+      "mode": "coastal",
+      "truth_imagery": "coastal",
+      "bbox": [35.6105, 33.97, 35.6305, 33.99],
+      "before_window": "2019-05-01..2019-09-30",
+      "after_window": "2024-05-01..2024-09-30",
+      "grid": 200,
+      "nearest_place": "Jounieh coast (demo)",
+      "expect_violation": true
+    },
+    {
+      "name": "Stable shoreline (synthetic)",
+      "mode": "coastal",
+      "truth_imagery": "stable",
+      "bbox": [35.6105, 33.97, 35.6305, 33.99],
+      "before_window": "2019-05-01..2019-09-30",
+      "after_window": "2024-05-01..2024-09-30",
+      "grid": 200,
+      "nearest_place": "Jounieh coast (demo)",
+      "expect_violation": false
+    },
+
+    {
+      "name": "Bourj Hammoud sea landfill (REAL)",
+      "mode": "coastal",
+      "bbox": [35.540, 33.894, 35.564, 33.914],
+      "before_window": "2017-04-01..2017-10-31",
+      "after_window": "2024-05-01..2024-09-30",
+      "grid": 256,
+      "nearest_place": "Bourj Hammoud, Beirut",
+      "expect_violation": true,
+      "label_provenance": "Documented post-2015 waste-crisis coastal landfill bulldozed into the sea; large reclamation visible 2017->2024 in S2."
+    },
+    {
+      "name": "Costa Brava coastal landfill (REAL)",
+      "mode": "coastal",
+      "bbox": [35.468, 33.806, 35.490, 33.824],
+      "before_window": "2017-04-01..2017-10-31",
+      "after_window": "2024-05-01..2024-09-30",
+      "grid": 256,
+      "nearest_place": "Costa Brava, south Beirut",
+      "expect_violation": true,
+      "label_provenance": "Documented coastal landfill near the airport; reclamation into the sea visible 2017->2024 in S2."
+    },
+    {
+      "name": "Ain Dara quarrying area (REAL)",
+      "mode": "quarry",
+      "bbox": [35.708, 33.758, 35.724, 33.773],
+      "before_window": "2018-05-01..2018-09-30",
+      "after_window": "2024-05-01..2024-09-30",
+      "grid": 256,
+      "nearest_place": "Ain Dara, Mount Lebanon",
+      "expect_violation": true,
+      "label_provenance": "Known quarrying area; bare-rock expansion visible in S2."
+    },
+    {
+      "name": "Jbeil hinterland quarries (REAL)",
+      "mode": "quarry",
+      "bbox": [35.665, 34.095, 35.695, 34.120],
+      "before_window": "2017-04-01..2017-10-31",
+      "after_window": "2024-05-01..2024-09-30",
+      "grid": 256,
+      "nearest_place": "Jbeil (Byblos) hinterland",
+      "expect_violation": true,
+      "label_provenance": "Hillside quarrying in the Jbeil hinterland; bare-rock expansion visible in S2."
+    },
+    {
+      "name": "Jounieh waterfront (REAL)",
+      "mode": "coastal",
+      "bbox": [35.600, 33.960, 35.640, 34.000],
+      "before_window": "2018-05-01..2018-09-30",
+      "after_window": "2024-05-01..2024-09-30",
+      "grid": 400,
+      "nearest_place": "Jounieh coast",
+      "expect_violation": true,
+      "label_provenance": "Waterfront construction extending toward the water visible in S2."
+    },
+
+    {
+      "name": "Tyre Coast Nature Reserve (REAL, stable)",
+      "mode": "coastal",
+      "bbox": [35.190, 33.260, 35.215, 33.285],
+      "before_window": "2018-05-01..2018-09-30",
+      "after_window": "2024-05-01..2024-09-30",
+      "grid": 300,
+      "nearest_place": "Tyre coast, South Lebanon",
+      "expect_violation": false,
+      "label_provenance": "Protected natural coast (Ramsar / nature reserve); expected no new coastal construction."
+    },
+    {
+      "name": "Mansouri south natural coast (REAL, stable)",
+      "mode": "coastal",
+      "bbox": [35.180, 33.110, 35.205, 33.135],
+      "before_window": "2018-05-01..2018-09-30",
+      "after_window": "2024-05-01..2024-09-30",
+      "grid": 256,
+      "nearest_place": "Mansouri, South Lebanon",
+      "expect_violation": false,
+      "label_provenance": "Natural sandy coast (protected turtle beach / hima); expected stable shoreline."
+    },
+    {
+      "name": "Al-Shouf / Barouk forest interior (REAL, stable)",
+      "mode": "quarry",
+      "bbox": [35.685, 33.685, 35.705, 33.705],
+      "before_window": "2018-05-01..2018-09-30",
+      "after_window": "2024-05-01..2024-09-30",
+      "grid": 256,
+      "nearest_place": "Barouk, Chouf (Al-Shouf Cedar Reserve)",
+      "expect_violation": false,
+      "label_provenance": "Stable forested interior of the Al-Shouf Cedar Reserve; expected no quarry-like change."
+    },
+    {
+      "name": "Horsh Ehden forest reserve (REAL, stable)",
+      "mode": "quarry",
+      "bbox": [35.985, 34.285, 36.010, 34.310],
+      "before_window": "2018-05-01..2018-09-30",
+      "after_window": "2024-05-01..2024-09-30",
+      "grid": 256,
+      "nearest_place": "Ehden, North Lebanon",
+      "expect_violation": false,
+      "label_provenance": "Stable forested nature reserve; expected no quarry-like change."
+    },
+    {
+      "name": "Bekaa cropland near Zahle (REAL, stable, hard negative)",
+      "mode": "quarry",
+      "bbox": [35.870, 33.815, 35.895, 33.840],
+      "before_window": "2018-05-01..2018-09-30",
+      "after_window": "2024-05-01..2024-09-30",
+      "grid": 256,
+      "nearest_place": "Zahle, Bekaa",
+      "expect_violation": false,
+      "label_provenance": "Seasonal agricultural plain; a deliberate hard negative for false positives (same-season windows should keep it stable; not a quarry/coastal violation)."
+    }
+  ]
+}

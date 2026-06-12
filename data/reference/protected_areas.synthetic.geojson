@@ -1,0 +1,4 @@
+{"type":"FeatureCollection","features":[
+{"type":"Feature","properties":{"name":"Demo cedar reserve (synthetic)"},
+"geometry":{"type":"Polygon","coordinates":[[[35.698,33.998],[35.706,33.998],[35.706,34.006],[35.698,34.006],[35.698,33.998]]]}}
+]}

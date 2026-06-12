@@ -1,0 +1,69 @@
+{
+  "runs": [
+    {
+      "id": "ain-dara",
+      "title": "Ain Dara \u00b7 Mount Lebanon",
+      "mode": "quarry",
+      "centroid": [
+        35.716108,
+        33.765629
+      ],
+      "tier": "high",
+      "score": 61.4,
+      "flags": 1,
+      "area_ha": 1.82,
+      "aoi_km2": 6.6,
+      "review": "cleared",
+      "generated_at": "2026-06-13T00:57:56"
+    },
+    {
+      "id": "bourj-hammoud",
+      "title": "Bourj Hammoud \u00b7 sea landfill",
+      "mode": "coastal",
+      "centroid": [
+        35.554684,
+        33.902338
+      ],
+      "tier": "critical",
+      "score": 85.9,
+      "flags": 2,
+      "area_ha": 21.92,
+      "aoi_km2": 6.6,
+      "review": null,
+      "generated_at": "2026-06-13T00:59:11"
+    },
+    {
+      "id": "costa-brava",
+      "title": "Costa Brava \u00b7 coastal landfill",
+      "mode": "coastal",
+      "centroid": [
+        35.479338,
+        33.820207
+      ],
+      "tier": "high",
+      "score": 63.2,
+      "flags": 1,
+      "area_ha": 56.13,
+      "aoi_km2": 6.6,
+      "review": null,
+      "generated_at": "2026-06-13T01:00:01"
+    },
+    {
+      "id": "jounieh",
+      "title": "Jounieh waterfront \u00b7 Mount Lebanon",
+      "mode": "coastal",
+      "centroid": [
+        35.610522,
+        33.983481
+      ],
+      "tier": "medium",
+      "score": 51.7,
+      "flags": 1,
+      "area_ha": 2.4,
+      "aoi_km2": 16.0,
+      "review": null,
+      "generated_at": "2026-06-13T01:01:40"
+    }
+  ],
+  "default": "bourj-hammoud"
+}

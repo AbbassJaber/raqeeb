@@ -1,0 +1,180 @@
+{
+  "id": "ain-dara",
+  "title": "Ain Dara \u00b7 Mount Lebanon",
+  "mode": "quarry",
+  "nearest_place": "Ain Dara, Mount Lebanon",
+  "centroid": [
+    35.716108,
+    33.765629
+  ],
+  "windows": {
+    "before": "2018-05-01..2018-09-30",
+    "after": "2024-05-01..2024-09-30"
+  },
+  "images": {
+    "before": "before.png",
+    "after": "after.png",
+    "grid": 256
+  },
+  "region": {
+    "id": "R020",
+    "pixel_bbox": [
+      119,
+      119,
+      135,
+      139
+    ],
+    "area_ha": 1.82,
+    "ndvi_drop": 0.402,
+    "bsi_rise": 0.325
+  },
+  "classification": {
+    "label": "agriculture",
+    "confidence": 0.55,
+    "source": "claude",
+    "reasoning": "The before image shows dense green vegetation/forest cover, while the after image shows cleared land with exposed soil/earth tones. This pattern is consistent with agricultural land clearing or deforestation for farming purposes, where natural vegetation has been removed to prepare land for cultivation."
+  },
+  "flags": [
+    "overlaps Shouf Biosphere Reserve (protected area)"
+  ],
+  "distance_to_coast_m": 20294.6,
+  "severity": {
+    "score": 61.4,
+    "tier": "high",
+    "factors": [
+      {
+        "label": "overlaps Shouf Biosphere Reserve (protected area)",
+        "points": 35
+      },
+      {
+        "label": "change area 1.82 ha",
+        "points": 7.3
+      },
+      {
+        "label": "signal strength (NDVI 0.402, BSI 0.325)",
+        "points": 13.6
+      },
+      {
+        "label": "classifier confidence 0.55",
+        "points": 5.5
+      }
+    ]
+  },
+  "second_opinion": {
+    "verdict": "downgrade",
+    "confidence": 0.55,
+    "reason": "The change from dense green vegetation to exposed brownish soil is consistent with seasonal harvest or agricultural ploughing rather than a permanent land-use change, making the 'agriculture' label partially appropriate but the confidence overstated given the likely cyclical nature of the activity."
+  },
+  "overlays": [
+    {
+      "type": "protected",
+      "kind": "polygon",
+      "points": [
+        [
+          1.37,
+          81.0
+        ],
+        [
+          0.0,
+          79.33
+        ],
+        [
+          0.0,
+          10.56
+        ],
+        [
+          9.5,
+          0.0
+        ],
+        [
+          100.0,
+          0.0
+        ],
+        [
+          100.0,
+          100.0
+        ],
+        [
+          0.0,
+          100.0
+        ],
+        [
+          0.0,
+          82.92
+        ],
+        [
+          1.37,
+          81.0
+        ]
+      ]
+    }
+  ],
+  "narration": [
+    "Monitoring Ain Dara, Mount Lebanon \u2014 2018-05-01..2018-09-30 vs 2024-05-01..2024-09-30.",
+    "Pulled before/after composites and aligned them (same-season, cloud-masked).",
+    "Detected 1.82 ha of change at 33.7656 N, 35.7161 E (NDVI drop 0.402, BSI rise 0.325).",
+    "Classified as agriculture (confidence 0.55; claude). Second opinion: downgraded \u2014 The change from dense green vegetation to exposed brownish soil is consistent with seasonal harvest or agricultural ploughing rather than a permanent land-use change, making the 'agriculture' label partially appropriate but the confidence overstated given the likely cyclical nature of the activity..",
+    "Legality check: overlaps Shouf Biosphere Reserve (protected area).",
+    "Compiled the evidence dossier.",
+    "Drafted an alert for human review \u2014 not sent."
+  ],
+  "dossier": "dossier_R020.pdf",
+  "provider": "claude",
+  "generated_at": "2026-06-13T00:57:56",
+  "timeseries": {
+    "years": [
+      2018,
+      2019,
+      2020,
+      2021,
+      2022,
+      2023,
+      2024
+    ],
+    "series": [
+      {
+        "year": 2018,
+        "area_ha": 0
+      },
+      {
+        "year": 2019,
+        "area_ha": 1.05
+      },
+      {
+        "year": 2020,
+        "area_ha": 0.7
+      },
+      {
+        "year": 2021,
+        "area_ha": 0
+      },
+      {
+        "year": 2022,
+        "area_ha": 4.55
+      },
+      {
+        "year": 2023,
+        "area_ha": 5.29
+      },
+      {
+        "year": 2024,
+        "area_ha": 4.3
+      }
+    ],
+    "onset": 2019,
+    "images": {
+      "2018": "year_2018.png",
+      "2019": "year_2019.png",
+      "2020": "year_2020.png",
+      "2021": "year_2021.png",
+      "2022": "year_2022.png",
+      "2023": "year_2023.png",
+      "2024": "year_2024.png"
+    }
+  },
+  "field_review": {
+    "status": "cleared",
+    "note": "",
+    "at": "2026-06-13T01:26:08"
+  }
+}
