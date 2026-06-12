@@ -66,8 +66,11 @@ intersections in `raqeeb/legality.py` already run in metric CRS.
 - Current config: `LLM_PROVIDER` auto (claude when ANTHROPIC_API_KEY set),
   `CLAUDE_MODEL=claude-sonnet-4-6`, `GEMINI_MODEL=gemini-2.5-flash`,
   `METRIC_CRS=EPSG:32636`, `COASTAL_SETBACK_M=150`, `PIXEL_M=10`.
-- Reference layers in `data/reference/*.geojson` are currently synthetic; replace
-  the coastline with a real Lebanon coastline before the coastal mode is meaningful.
+- Reference layers in `data/reference/`: **protected areas (real WDPA/WCMC, via Earth
+  Engine) and the coastline are now real**; only the permitted-quarry zone is still a
+  synthetic proxy. (The old synthetic placeholders are kept as `*.synthetic.geojson`.)
+  WDPA polygons are still a *triage* proxy — confirm exact boundaries against the
+  official cadastre / Ministry of Environment.
 
 ## Environment
 
