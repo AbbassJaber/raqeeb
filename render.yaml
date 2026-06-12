@@ -21,8 +21,12 @@ services:
     region: frankfurt          # closest Render region to Lebanon (lower latency)
     healthCheckPath: /api/health
     autoDeploy: true           # redeploy on every push to the connected branch
-    # No dockerCommand: the image's CMD (docker-entrypoint.sh) binds Render's $PORT and
-    # places the Earth Engine creds Secret File if present.
+    # Mangle-proof start command: a single program + one arg (no quotes, ;, [ or ${} that
+    # Render's command parser can break on). Runs the image entrypoint, which binds Render's
+    # $PORT and places the Earth Engine creds Secret File if present.
+    # NOTE: if an earlier deploy saved the old inline command, CLEAR or replace the service's
+    # "Docker Command" field in the Render dashboard — a Blueprint sync won't overwrite it.
+    dockerCommand: sh /app/docker-entrypoint.sh
     envVars:
       - key: INSTALL_LIVE          # build-time: install earthengine-api (live Sentinel-2) into the image
         value: "1"
