@@ -2,7 +2,7 @@
 #
 # Builds an OFFLINE-by-default image: the cached real cases (Bourj Hammoud, Costa Brava,
 # Jounieh) and the synthetic pipeline run with no keys and no network, so the demo can't
-# die. For the LIVE path (real Sentinel-2 + Gemini) see the notes at the bottom.
+# die. For the LIVE path (real Sentinel-2 + Claude) see the notes at the bottom.
 FROM python:3.12-slim
 
 # Unbuffered stdout so SSE/agent logs stream out immediately; no .pyc clutter.
@@ -18,9 +18,10 @@ WORKDIR /app
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
-# Optionally bake in the LIVE deps (real Sentinel-2 via Earth Engine + Gemini vision).
-# Off by default to keep the offline image lean; the compose `live` profile builds with
-# --build-arg INSTALL_LIVE=1. These are intentionally NOT in requirements.txt.
+# Optionally bake in the LIVE-only deps: Earth Engine (real Sentinel-2) + the Gemini SDK.
+# The Claude SDK (anthropic) is already in requirements.txt, so the live Claude path needs no
+# build flag. Off by default to keep the offline image lean; the compose `live` profile and
+# render.yaml build with INSTALL_LIVE=1. These are intentionally NOT in requirements.txt.
 ARG INSTALL_LIVE=0
 RUN if [ "$INSTALL_LIVE" = "1" ]; then pip install --no-cache-dir google-genai earthengine-api; fi
 
@@ -36,10 +37,10 @@ EXPOSE 8000
 CMD ["uvicorn", "app.server:app", "--host", "0.0.0.0", "--port", "8000"]
 
 # --- Going live (optional) --------------------------------------------------------------
-# The base image is offline. For real imagery + AI, install the live deps (not in
-# requirements.txt) and pass credentials at runtime — e.g. add to the build:
-#   RUN pip install --no-cache-dir google-genai earthengine-api
-# then run with a Gemini key, a GCP project, and your Earth Engine credentials mounted:
+# The base image is offline. For real imagery + AI, build with INSTALL_LIVE=1 (installs
+# earthengine-api; the anthropic SDK is already present) and pass credentials at runtime:
+#   docker build --build-arg INSTALL_LIVE=1 -t raqeeb:live .
 #   docker run -p 8000:8000 \
-#     -e RAQEEB_OFFLINE=0 -e GEMINI_API_KEY=... -e EARTHENGINE_PROJECT=<gcp-project> \
-#     -v "$HOME/.config/earthengine:/root/.config/earthengine:ro" raqeeb
+#     -e RAQEEB_OFFLINE=0 -e RAQEEB_LLM=claude -e ANTHROPIC_API_KEY=... \
+#     -e EARTHENGINE_PROJECT=<gcp-project> \
+#     -v "$HOME/.config/earthengine:/root/.config/earthengine:ro" raqeeb:live

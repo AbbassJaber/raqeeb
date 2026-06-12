@@ -3,14 +3,14 @@
 #   Offline (no keys, no network — cached real cases + synthetic pipeline):
 #     docker compose --profile offline up --build
 #
-#   Live (real Sentinel-2 via Earth Engine + Gemini vision — needs creds, see below):
+#   Live (real Sentinel-2 via Earth Engine + Claude vision — needs creds, see below):
 #     docker compose --profile live up --build
 #
 # Both expose http://localhost:8000. They are mutually exclusive (same port) — run one
 # profile at a time. A bare `docker compose up` starts nothing on purpose; pick a profile.
 #
 # Compose reads ./.env for the ${...} values below — copy .env.example to .env and fill in
-# GEMINI_API_KEY + EARTHENGINE_PROJECT (+ EARTHENGINE_CREDS) before using the live profile.
+# ANTHROPIC_API_KEY + EARTHENGINE_PROJECT (+ EARTHENGINE_CREDS) before using the live profile.
 
 services:
   # --- offline (default demo surface) ---------------------------------------------------
@@ -36,8 +36,8 @@ services:
       - "8000:8000"
     environment:
       RAQEEB_OFFLINE: "0"
-      RAQEEB_LLM: "gemini"
-      GEMINI_API_KEY: "${GEMINI_API_KEY:?set GEMINI_API_KEY in .env for the live profile}"
+      RAQEEB_LLM: "claude"
+      ANTHROPIC_API_KEY: "${ANTHROPIC_API_KEY:?set ANTHROPIC_API_KEY in .env for the live profile}"
       EARTHENGINE_PROJECT: "${EARTHENGINE_PROJECT:?set EARTHENGINE_PROJECT in .env for the live profile}"
     volumes:
       # Earth Engine credentials produced by `earthengine authenticate` on the host.

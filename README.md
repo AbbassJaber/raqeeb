@@ -87,14 +87,14 @@ Orbital-Command UI: press ▶ Run for the auto-played perceive→reason→act se
 
 The watchroom runs in a container — **offline by default** (cached real cases + the
 synthetic pipeline, no keys, no network), with an opt-in **live** profile for real
-Sentinel-2 + Gemini.
+Sentinel-2 + Claude.
 
 ```powershell
 # Offline (no keys, no network):
 docker compose --profile offline up --build      # http://localhost:8000
 
-# Live (real Sentinel-2 + Gemini): copy .env.example -> .env and fill in
-# GEMINI_API_KEY, EARTHENGINE_PROJECT and EARTHENGINE_CREDS, then:
+# Live (real Sentinel-2 + Claude): copy .env.example -> .env and fill in
+# ANTHROPIC_API_KEY, EARTHENGINE_PROJECT and EARTHENGINE_CREDS, then:
 docker compose --profile live up --build
 ```
 
@@ -116,7 +116,7 @@ credentials from `earthengine authenticate` read-only. See the `Dockerfile` head
 
 1. **Earth Engine**: `./.venv/Scripts/earthengine.exe authenticate`, then a Google Cloud
    project with the Earth Engine API enabled + the project registered (set `EARTHENGINE_PROJECT`).
-2. **LLM key**: `setx GEMINI_API_KEY "..."` (free) or `setx ANTHROPIC_API_KEY "..."`.
+2. **LLM key**: `setx ANTHROPIC_API_KEY "..."` (the live default) or `setx GEMINI_API_KEY "..."` (free fallback).
 3. `RAQEEB_OFFLINE=0`. See `.env.example`.
 
 Scout / verify on real imagery:
@@ -130,15 +130,15 @@ Scout / verify on real imagery:
 ./.venv/Scripts/python.exe scripts/run_live_agent.py --bbox ... --mode coastal --project <P>
 ```
 
-### Verified live (Gemini)
+### Verified live (Claude)
 
 - **Quarry** — Ain Dara, Mount Lebanon (`35.708,33.758,35.724,33.773`, 2018→2024): 1.82 ha
   bare-rock expansion → `quarry_expansion` → "outside any permitted zone".
 - **Coastal** — Jounieh waterfront (`35.60,33.96,35.64,34.00`, 2018→2024): 2.4 ha shoreline
   change extending into the water → `coastal_construction` → "within the coastal public-domain setback".
-- **Accuracy (real sites, N=4):** 2/2 known-problem sites flagged, 2/2 stable sites clean
-  → precision/recall 1.00 per mode. *Indicative only — small N, imagery-derived labels (not
-  field-verified). Expand `data/eval_sites.json` to strengthen.*
+- **Accuracy (10 real sites):** precision 1.0 · recall 0.8 · F1 0.89 (quarry + coastal).
+  *Labels are imagery-derived, not yet field-verified — the onsite-verdict loop supplies that
+  ground truth. Expand `data/eval_sites.json` to strengthen.*
 
 ## Project layout
 

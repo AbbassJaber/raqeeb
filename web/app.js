@@ -81,7 +81,7 @@ function refreshLiveBadge() {
       b.textContent = '○ Demo mode · synthetic pipeline';
       b.className = 'livebadge mono off';
     } else {
-      b.textContent = '● Live · Sentinel-2 + ' + (h.provider === 'gemini' ? 'Gemini' : 'AI');
+      b.textContent = '● Live · Sentinel-2 + ' + (h.provider === 'claude' ? 'Claude' : h.provider === 'gemini' ? 'Gemini' : 'AI');
       b.className = 'livebadge mono on';
     }
   }).catch(() => { b.textContent = ''; });
