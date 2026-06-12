@@ -1,16 +1,17 @@
 # Render Blueprint — deploys the Raqeeb watchroom as a Docker web service in LIVE mode
-# (real Sentinel-2 via Earth Engine + Gemini vision).
+# (real Sentinel-2 via Earth Engine + Claude vision/tool-use).
 #
 # One-time setup in the Render dashboard after you connect this repo as a Blueprint:
-#   1. Set GEMINI_API_KEY (it's marked sync:false below, so Render prompts for it as a secret).
+#   1. Set ANTHROPIC_API_KEY (it's marked sync:false below, so Render prompts for it as a secret).
 #   2. Add a Secret File named `earthengine-credentials` whose contents are your local
 #      ~/.config/earthengine/credentials  (created by `earthengine authenticate`).
 #      The start command below copies it into the place the earthengine-api expects, so no
 #      code change is needed. If you skip this, the app still runs — cached real cases and
-#      the Gemini chat/agent work; only NEW drawn-zone Sentinel-2 fetches need Earth Engine.
+#      the Claude chat/agent work; only NEW drawn-zone Sentinel-2 fetches need Earth Engine.
 #
-# Render maps these env vars into Docker build args, so INSTALL_LIVE=1 makes the image
-# build with google-genai + earthengine-api (see the Dockerfile's INSTALL_LIVE arg).
+# Render maps these env vars into Docker build args, so INSTALL_LIVE=1 builds the image with
+# earthengine-api (for live Sentinel-2). The `anthropic` SDK is already in requirements.txt,
+# so Claude itself needs no build flag.
 services:
   - type: web
     name: raqeeb
@@ -27,13 +28,16 @@ services:
       cp /etc/secrets/earthengine-credentials /root/.config/earthengine/credentials; fi;
       exec uvicorn app.server:app --host 0.0.0.0 --port ${PORT:-8000}'
     envVars:
-      - key: INSTALL_LIVE          # build-time: install the live deps into the image
+      - key: INSTALL_LIVE          # build-time: install earthengine-api (live Sentinel-2) into the image
         value: "1"
       - key: RAQEEB_OFFLINE
         value: "0"
       - key: RAQEEB_LLM
-        value: gemini
+        value: claude
       - key: EARTHENGINE_PROJECT   # your GCP project (from the demo runsheet); change if different
         value: raqeeb-498718
-      - key: GEMINI_API_KEY        # secret — Render prompts for this in the dashboard
+      - key: ANTHROPIC_API_KEY     # secret — Render prompts for this in the dashboard
         sync: false
+      # Optional: override the model (defaults to claude-sonnet-4-6 in raqeeb/config.py).
+      # - key: RAQEEB_MODEL
+      #   value: claude-sonnet-4-6
