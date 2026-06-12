@@ -11,6 +11,25 @@ const TIER_COLOR = { critical: '#e5484d', high: '#ef8b3c', medium: '#e0a83a', lo
 const SCAN_MAX_KM = 5;   // mirror config.SCAN_MAX_KM — keep ad-hoc scans near 10 m/pixel
 
 const $ = (id) => document.getElementById(id);
+const T = (k, v) => window.i18n.t(k, v);          // current-locale string (named T to avoid clashing with i18n.js's global `t`)
+const tCls = (label) => T('cls.' + label, {}) !== ('cls.' + label)  // localized class label, else prettified
+  ? T('cls.' + label) : (label || '').replaceAll('_', ' ');
+
+// Severity factors arrive from the backend as English data strings (run.json stays English
+// for the chat + dossier). Pattern-match each to a translated template, preserving the
+// embedded numbers; fall through to the original string for anything unrecognised.
+function tSevLabel(label) {
+  if (window.i18n.getLocale() !== 'ar') return label;
+  let m;
+  if (/coastal public-domain setback/i.test(label)) return T('sevf.setback');
+  if (/outside any permitted/i.test(label)) return T('sevf.permit');
+  if ((m = label.match(/^overlaps (.+) \(protected area\)$/i))) return T('sevf.protected_named', { name: m[1] });
+  if (/protected area/i.test(label)) return T('sevf.protected');
+  if ((m = label.match(/change area ([\d.]+) ha/i))) return T('sevf.area', { n: m[1] });
+  if ((m = label.match(/NDVI (-?[\d.]+), BSI (-?[\d.]+)/i))) return T('sevf.signal', { ndvi: m[1], bsi: m[2] });
+  if ((m = label.match(/classifier confidence ([\d.]+)/i))) return T('sevf.confidence', { n: m[1] });
+  return label;
+}
 
 async function loadMotion() {
   // Framer-Motion-grade springs/counters with no build step. Falls back to the
@@ -27,6 +46,7 @@ async function init() {
   await loadMotion();
   manifest = await loadManifest();
   if (!manifest || !manifest.runs.length) {
+    window.i18n.applyLocale();
     $('status').textContent = 'no cached run — run scripts/build_demo_run.py';
     return;
   }
@@ -50,13 +70,38 @@ async function init() {
   $('introStart').onclick = hideIntro;
   $('helpBtn').onclick = showIntro;
   $('intro').onclick = e => { if (e.target === $('intro')) hideIntro(); };  // click backdrop to dismiss
+  $('langToggle').onclick = () => window.i18n.toggleLocale(relocalize);
   try { if (!sessionStorage.getItem('rqIntro')) showIntro(); } catch (_) { showIntro(); }
   document.addEventListener('keydown', onKey);
   setupSwipe();
+  window.i18n.applyLocale();   // set dir/lang + fill static strings for the persisted locale
   showOverview();      // land on the watchroom (queue + map)
   buildOverview();     // build the Leaflet map now that the overview is visible
   refreshLiveBadge();
   renderEval();        // measured accuracy on the labelled real-site set
+}
+
+// re-render every dynamic, language-dependent view after a locale switch. Static
+// [data-i18n] nodes are already refilled by i18n.applyLocale(); this handles the
+// JS-generated content (queue, case meta, reasoning, status, badges, map labels).
+function relocalize() {
+  refreshLiveBadge();
+  renderEval();
+  if (document.body.classList.contains('view-case')) {
+    if (run) {
+      renderCaseMeta();
+      if (run.classification) $('clsLabel').textContent = tCls(run.classification.label);
+      const log = $('log'); log.innerHTML = '';
+      condenseNarration(run).forEach(line => log.appendChild(logLine(line.text, line.flag)));
+      revealReasoning();
+    }
+    setBeat(beat);   // keep the status word in sync with the current beat
+  } else {
+    $('status').innerHTML = '<span class="dot"></span>' + T('status.watching');
+    renderQueue();
+  }
+  // Leaflet bakes its layer-control + tooltip labels at build time → rebuild the map.
+  if (overviewMap) { overviewMap.remove(); overviewMap = null; buildOverview(); }
 }
 
 // watchroom validation chip: real precision/recall/F1 from the accuracy harness
@@ -65,9 +110,9 @@ function renderEval() {
   const pct = x => x == null ? '—' : Math.round(x * 100) + '%';
   fetch('/api/eval').then(r => r.json()).then(e => {
     if (!e.available || e.precision == null) { el.textContent = ''; return; }
-    el.innerHTML = `<span class="eval-dot"></span>Validated · P ${pct(e.precision)} · `
+    el.innerHTML = `<span class="eval-dot"></span>${T('eval.validated')} · P ${pct(e.precision)} · `
       + `R ${pct(e.recall)} · F1 ${e.f1 != null ? e.f1.toFixed(2) : '—'}`
-      + `<span class="eval-n"> on ${e.n} real sites</span>`;
+      + `<span class="eval-n"> ${T('eval.on', { n: e.n })}</span>`;
     el.title = `${e.mode} benchmark, ${e.classifier} (first-pass, pre human review): `
       + `TP ${e.tp} · FP ${e.fp} · FN ${e.fn} · TN ${e.tn}. ${e.note || ''}`;
   }).catch(() => { el.textContent = ''; });
@@ -78,10 +123,10 @@ function refreshLiveBadge() {
   const b = $('liveBadge'); if (!b) return;
   fetch('/api/health').then(r => r.json()).then(h => {
     if (h.offline) {
-      b.textContent = '○ Demo mode · synthetic pipeline';
+      b.textContent = T('badge.demo');
       b.className = 'livebadge mono off';
     } else {
-      b.textContent = '● Live · Sentinel-2 + ' + (h.provider === 'claude' ? 'Claude' : h.provider === 'gemini' ? 'Gemini' : 'AI');
+      b.textContent = T('badge.live') + (h.provider === 'claude' ? 'Claude' : h.provider === 'gemini' ? 'Gemini' : 'AI');
       b.className = 'livebadge mono on';
     }
   }).catch(() => { b.textContent = ''; });
@@ -122,7 +167,7 @@ function buildOverview() {
   overviewMap = map;
   renderPins(true);
   renderAOIs();
-  const overlays = { 'Candidates': pinLayer, 'Monitored areas': aoiLayer };
+  const overlays = { [T('map.layer.candidates')]: pinLayer, [T('map.layer.areas')]: aoiLayer };
   const ctl = L.control.layers(baseMaps, overlays, { collapsed: true }).addTo(map);
   addDrawControl(map);
   // reference context layers (added to the switcher once fetched; off until toggled)
@@ -132,8 +177,8 @@ function buildOverview() {
       permitted: { color: '#e0a83a', weight: 2, dashArray: '4 3', fill: false },
       coastline: { color: '#46c0b0', weight: 2 },
     };
-    [['coastline', 'Coastline (national boundary)'], ['protected', 'Protected areas (WDPA)'],
-     ['permitted', 'Permitted zones (proxy)']].forEach(([k, name]) => {
+    [['coastline', T('map.layer.coastline')], ['protected', T('map.layer.protected')],
+     ['permitted', T('map.layer.permitted')]].forEach(([k, name]) => {
       if (ref[k]) ctl.addOverlay(L.geoJSON(ref[k], {
         style: styles[k],
         onEachFeature: (f, lyr) => {
@@ -171,12 +216,12 @@ function renderPins(fit) {
     pts.push([lat, lon]);
     const m = L.circleMarker([lat, lon],
       { radius: 9, color, fillColor: color, fillOpacity: .85, weight: 2, className: 'rq-pin' }).addTo(pinLayer);
-    const tier = r.tier ? r.tier.toUpperCase() : 'n/a', score = r.score != null ? ` · ${r.score}/100` : '';
+    const tier = r.tier ? (T('sev.' + r.tier) || r.tier).toUpperCase() : 'n/a', score = r.score != null ? ` · ${r.score}/100` : '';
     m.bindPopup(
       `<img class="pop-thumb" src="runs/${r.id}/after.png" alt="">` +
       `<b>${r.title}</b><br><span class="pop-tier" style="color:${color}">${tier}${score}</span>` +
-      `<br>${r.flags} rule${r.flags === 1 ? '' : 's'} flagged<br>` +
-      `<span class="pop-open" data-id="${r.id}">▶ open dossier</span>`);
+      `<br>${r.flags} ${r.flags === 1 ? T('rule') : T('rules')} ${T('flagged')}<br>` +
+      `<span class="pop-open" data-id="${r.id}">${T('pop.open')}</span>`);
     m.on('popupopen', e => {
       const el = e.popup.getElement().querySelector('.pop-open');
       if (el) el.onclick = () => openRun(r.id);
@@ -241,8 +286,9 @@ function addDrawControl(map) {
       drawn.clearLayers();
       return;
     }
+    // no title → the server names the zone after its real place (reverse-geocoded)
     runAgentic({ bbox: [b.getWest(), b.getSouth(), b.getEast(), b.getNorth()],
-                 mode: 'quarry', title: 'Drawn zone' });
+                 mode: 'quarry' });
   });
 }
 
@@ -263,25 +309,26 @@ function renderQueue() {
   });
   $('queueCount').textContent = `(${runs.length})`;
   const parts = [];
-  ['critical', 'high', 'medium', 'low'].forEach(t => {
-    const n = runs.filter(r => r.tier === t && r.review !== 'cleared').length; if (n) parts.push(`${n} ${t}`);
+  ['critical', 'high', 'medium', 'low'].forEach(tier => {
+    const n = runs.filter(r => r.tier === tier && r.review !== 'cleared').length;
+    if (n) parts.push(`${n} ${T('sev.' + tier)}`);
   });
   const unscored = runs.filter(r => !r.tier && r.review !== 'cleared').length;
-  if (unscored) parts.push(`${unscored} unscored`);
+  if (unscored) parts.push(`${unscored} ${T('queue.unscored')}`);
   const cleared = runs.filter(r => r.review === 'cleared').length;
-  if (cleared) parts.push(`${cleared} cleared`);
+  if (cleared) parts.push(`${cleared} ${T('queue.cleared')}`);
   // ops-console header: how much ground + when last looked
   const km2 = runs.reduce((s, r) => s + (r.aoi_km2 || 0), 0);
   const dates = runs.map(r => r.generated_at).filter(Boolean).sort();
-  const last = dates.length ? new Date(dates[dates.length - 1]).toLocaleDateString(undefined,
+  const locale = window.i18n.getLocale() === 'ar' ? 'ar' : undefined;
+  const last = dates.length ? new Date(dates[dates.length - 1]).toLocaleDateString(locale,
     { month: 'short', day: 'numeric' }) : null;
   $('queueSummary').textContent = parts.join(' · ')
-    + (km2 ? ` · watching ~${km2.toFixed(1)} km²` : '')
-    + (last ? ` · last sweep ${last}` : '');
+    + (km2 ? ` · ${T('queue.watching', { km: km2.toFixed(1) })}` : '')
+    + (last ? ` · ${T('queue.lastsweep', { date: last })}` : '');
   list.innerHTML = '';
   if (!runs.length) {
-    list.innerHTML = '<div class="queue-empty">No candidates yet. Draw a zone on the map ' +
-      '(▢ top-left) or ask Raqeeb to scan one.</div>';
+    list.innerHTML = `<div class="queue-empty">${T('queue.empty')}</div>`;
     return;
   }
   runs.forEach(r => {
@@ -290,17 +337,17 @@ function renderQueue() {
     const card = document.createElement('div');
     card.className = 'qcard' + (r.review === 'cleared' ? ' cleared' : '');
     card.dataset.id = r.id; card.tabIndex = 0;
-    const flag = r.review === 'cleared' ? '<span class="qflag cleared">✓ normal</span>'
-      : r.review === 'confirmed' ? '<span class="qflag confirmed">⚠ confirmed</span>' : '';
+    const flag = r.review === 'cleared' ? `<span class="qflag cleared">${T('fr.clear')}</span>`
+      : r.review === 'confirmed' ? `<span class="qflag confirmed">${T('fr.confirm')}</span>` : '';
     card.innerHTML =
       `<span class="qstripe" style="background:${color}"></span>` +
       `<img class="qthumb" src="runs/${r.id}/after.png" alt="" loading="lazy">` +
       `<span class="qbody">` +
         `<span class="qtitle">${r.title}</span>` +
-        `<span class="qmeta">${r.mode} · ${area}${r.flags} flagged</span>` +
+        `<span class="qmeta">${r.mode} · ${area}${r.flags} ${T('flagged')}</span>` +
         `<span class="qbar"><i style="width:${Math.max(2, r.score || 0)}%;background:${color}"></i></span>` +
       `</span>` +
-      `<span class="qsev" style="color:${color}">${r.tier || 'unscored'}` +
+      `<span class="qsev" style="color:${color}">${r.tier ? T('sev.' + r.tier) : T('sev.unscored')}` +
         `${r.score != null ? `<b>${Math.round(r.score)}</b>` : ''}${flag}</span>` +
       `<button class="qdel" title="Remove this candidate" aria-label="Remove">×</button>`;
     card.onclick = () => openRun(r.id);
@@ -313,12 +360,12 @@ function renderQueue() {
 }
 
 async function deleteCase(id, title) {
-  if (!confirm(`Remove "${title}" from the queue? This deletes its cached analysis.`)) return;
+  if (!confirm(T('confirm.delete', { title }))) return;
   try {
     const r = await fetch(`/api/run/${encodeURIComponent(id)}`, { method: 'DELETE' });
     if (!r.ok) throw new Error('delete failed');
   } catch (_) {
-    alert('Could not delete — is the server running?');
+    alert(T('alert.deletefail'));
     return;
   }
   if (runId === id) showOverview();
@@ -340,7 +387,7 @@ function showOverview() {
   document.body.classList.remove('view-case');
   document.body.classList.add('view-home');
   $('overview').hidden = false; $('runview').hidden = true;
-  $('status').innerHTML = '<span class="dot"></span>WATCHING';
+  $('status').innerHTML = '<span class="dot"></span>' + T('status.watching');
   renderQueue();
   if (overviewMap) setTimeout(() => overviewMap.invalidateSize(), 0);
 }
@@ -361,13 +408,13 @@ async function openRun(id) {       // drill into a case — auto-play the analys
 
 // map a legality flag to its (proxy) legal basis, for the case facts
 const LEGAL_BASIS = [
-  [/setback|public.?domain|maritime|coastal/i, 'Maritime public domain · 150 m setback'],
-  [/protected/i, 'Protected-area boundary'],
-  [/permit/i, 'Outside any permitted quarry zone'],
+  [/setback|public.?domain|maritime|coastal/i, 'basis.setback'],
+  [/protected/i, 'basis.protected'],
+  [/permit/i, 'basis.permit'],
 ];
 function legalBasis(flags) {
-  const t = (flags || []).join(' ');
-  for (const [re, label] of LEGAL_BASIS) if (re.test(t)) return label;
+  const joined = (flags || []).join(' ');
+  for (const [re, key] of LEGAL_BASIS) if (re.test(joined)) return T(key);
   return null;
 }
 
@@ -393,8 +440,8 @@ function renderFieldReview() {
   $('frClear').classList.toggle('on', !!fr && fr.status === 'cleared');
   $('frConfirm').classList.toggle('on', !!fr && fr.status === 'confirmed');
   if (!s) return;
-  if (!fr) { s.textContent = 'Not yet field-checked.'; return; }
-  const word = fr.status === 'cleared' ? 'Verified normal — cleared' : 'Confirmed violation';
+  if (!fr) { s.textContent = T('fr.notchecked'); return; }
+  const word = fr.status === 'cleared' ? T('fr.cleared') : T('fr.confirmed');
   s.textContent = `${fr.status === 'cleared' ? '✓' : '⚠'} ${word}${fr.at ? ' · ' + fr.at.slice(0, 10) : ''}`;
 }
 
@@ -408,7 +455,7 @@ async function setReview(status) {
     if (!r.ok) throw new Error('save failed');
     run.field_review = r.review || null;
   } catch (_) {
-    $('frStatus').textContent = 'Could not save — is the server running?';
+    $('frStatus').textContent = T('fr.savefail');
     return;
   }
   renderFieldReview();
@@ -423,20 +470,20 @@ function renderFacts() {
   if (fr) {                       // onsite verdict leads the facts strip
     const cleared = fr.status === 'cleared';
     chips.push(`<span class="fact ${cleared ? 'verdict-confirm' : 'verdict-reject'}">`
-      + `${cleared ? '✓ verified normal (cleared)' : '⚠ confirmed onsite'}</span>`);
+      + `${cleared ? T('fact.cleared') : T('fact.confirmed')}</span>`);
   }
   const so = run.second_opinion;
   if (so) {
-    const v = { confirm: 'confirmed', downgrade: 'downgraded', reject: 'likely false' }[so.verdict] || so.verdict;
+    const v = T('verdict2.' + so.verdict, {}) !== ('verdict2.' + so.verdict) ? T('verdict2.' + so.verdict) : so.verdict;
     const mark = so.verdict === 'confirm' ? '✓' : so.verdict === 'reject' ? '✕' : '↓';
-    chips.push(`<span class="fact verdict-${so.verdict}" title="${(so.reason || '').replace(/"/g, '')}">${mark} 2nd opinion: ${v}</span>`);
+    chips.push(`<span class="fact verdict-${so.verdict}" title="${(so.reason || '').replace(/"/g, '')}">${T('fact.2nd', { mark, v })}</span>`);
   }
   const a = run.region && run.region.area_ha;
   if (a != null) chips.push(`<span class="fact">▦ ${a} ha · ${Math.round(a * 10000).toLocaleString()} m²</span>`);
   const d = run.distance_to_coast_m;
-  if (d != null) chips.push(`<span class="fact">⌑ ${d <= 5 ? 'in the sea / at the shore' : Math.round(d) + ' m from coast'}</span>`);
+  if (d != null) chips.push(`<span class="fact">⌑ ${d <= 5 ? T('fact.insea') : T('fact.fromcoast', { m: Math.round(d) })}</span>`);
   const conf = run.classification && run.classification.confidence;
-  if (conf != null) chips.push(`<span class="fact">◴ confidence ${conf} · ${run.classification.source}</span>`);
+  if (conf != null) chips.push(`<span class="fact">${T('fact.confidence', { conf, source: run.classification.source })}</span>`);
   const basis = legalBasis(run.flags);
   if (basis) chips.push(`<span class="fact basis">§ ${basis}</span>`);
   facts.innerHTML = chips.join('');
@@ -446,20 +493,20 @@ function renderSeverity() {
   $('sevPanel').classList.remove('pending');
   const s = run.severity, chip = $('sevChip');
   if (!s) {
-    chip.textContent = 'unscored'; chip.style.color = '#8aa0c0'; chip.style.borderColor = '';
+    chip.textContent = T('sev.unscored'); chip.style.color = '#8aa0c0'; chip.style.borderColor = '';
     $('sevScore').textContent = '—'; $('sevTier').textContent = ''; $('sevFactors').innerHTML = '';
     const b = $('sevBar'); if (b) b.style.width = '0';
     return;
   }
   const color = TIER_COLOR[s.tier] || '#8aa0c0';
-  chip.textContent = `${s.tier.toUpperCase()} · ${s.score}/100`;
+  chip.textContent = `${(T('sev.' + s.tier) || s.tier).toUpperCase()} · ${s.score}/100`;
   chip.style.color = color; chip.style.borderColor = color;
   $('sevScore').textContent = s.score; $('sevScore').style.color = color;
-  $('sevTier').textContent = s.tier;
+  $('sevTier').textContent = T('sev.' + s.tier) || s.tier;
   const bar = $('sevBar');
   if (bar) { bar.style.width = Math.max(0, Math.min(100, s.score)) + '%'; bar.style.background = color; }
   $('sevFactors').innerHTML = (s.factors || []).map(f =>
-    `<div class="sevf"><span>${f.label}</span><span>+${f.points}</span></div>`).join('');
+    `<div class="sevf"><span>${tSevLabel(f.label)}</span><span>+${f.points}</span></div>`).join('');
 }
 
 function resetReview() {
@@ -467,26 +514,26 @@ function resetReview() {
   $('prepareBtn').disabled = true;
   $('revStatus').textContent = '';
   $('draft').classList.remove('ready');
-  $('draft').textContent = '✉ Alert drafted — not sent';
+  $('draft').textContent = T('draft.notsent');
 }
 
 async function prepareAlert() {        // human-gated: only fires after the checkbox + button
   if (!runId) return;
   $('prepareBtn').disabled = true;
-  $('revStatus').textContent = 'preparing…';
+  $('revStatus').textContent = T('review.preparing');
   try {
     const r = await fetch('/api/alert', {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ id: runId, reviewed: true })
+      body: JSON.stringify({ id: runId, reviewed: true, locale: window.i18n.getLocale() })
     }).then(r => r.json());
     if (r.ok) {
       $('revStatus').textContent = '✓ ' + r.message;
       if (r.draft) { $('draft').textContent = r.draft; $('draft').classList.add('ready'); }
     } else {
-      $('revStatus').textContent = r.detail || r.message || 'could not prepare alert';
+      $('revStatus').textContent = r.detail || r.message || T('alert.couldnot');
     }
   } catch (e) {
-    $('revStatus').textContent = 'live runs need the server — python scripts/run_server.py';
+    $('revStatus').textContent = T('live.servermsg');
   }
 }
 
@@ -518,27 +565,27 @@ async function sendChat(q) {
   $('chatInput').value = '';
   chatBubble(q, 'user');
   chatHistory.push({ role: 'user', text: q });
-  const bot = chatBubble('thinking…', 'bot thinking');
+  const bot = chatBubble(T('chat.thinking'), 'bot thinking');
   let data;
   try {
     data = await fetch('/api/chat', {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ question: q, history: chatHistory.slice(-8) })
+      body: JSON.stringify({ question: q, history: chatHistory.slice(-8), locale: window.i18n.getLocale() })
     }).then(r => r.json());
   } catch (e) {
     bot.className = 'chat-msg bot';
-    bot.textContent = 'The server isn’t running — start scripts/run_server.py.';
+    bot.textContent = T('chat.noserver');
     return;
   }
   bot.className = 'chat-msg bot';
-  bot.innerHTML = mdToHtml(data.answer || '(no answer)');
+  bot.innerHTML = mdToHtml(data.answer || T('chat.noanswer'));
   chatHistory.push({ role: 'assistant', text: data.answer || '' });
   if (data.action && data.action.type === 'scan') {
     const wrap = document.createElement('div');
     wrap.className = 'chat-refs';
     const go = document.createElement('button');
     go.className = 'ref';
-    go.textContent = '▶ Run this scan';
+    go.textContent = T('chat.runscan');
     go.onclick = () => { $('chat').classList.remove('open'); runAgentic(data.action.scenario); };
     wrap.appendChild(go);
     bot.appendChild(wrap);
@@ -566,26 +613,26 @@ async function runLive(body, endpoint = '/api/run') {
   stop();
   liveMode = true; liveTick++;
   enterCase();
-  $('status').innerHTML = '<span class="dot"></span>RUNNING';
+  $('status').innerHTML = '<span class="dot"></span>' + T('status.running');
   $('stageMsg').hidden = true; $('stageLoading').hidden = false;
   let resp;
   try {
     resp = await fetch(endpoint, { method: 'POST', headers: { 'Content-Type': 'application/json' },
-                                   body: JSON.stringify(body) });
+                                   body: JSON.stringify({ ...body, locale: window.i18n.getLocale() }) });
   } catch (e) {
     liveMode = false;
     $('stageLoading').hidden = true;
-    $('status').innerHTML = '<span class="dot"></span>NO SERVER';
-    $('stageMsg').textContent = 'Live runs need the server — run scripts/run_server.py.';
+    $('status').innerHTML = '<span class="dot"></span>' + T('status.noserver');
+    $('stageMsg').textContent = T('live.noserver');
     $('stageMsg').hidden = false;
     return;
   }
   if (!resp.ok) {   // e.g. zone too large (422) — show the reason, don't hang
     liveMode = false;
     $('stageLoading').hidden = true;
-    let msg = 'run rejected';
+    let msg = T('run.rejected');
     try { msg = (await resp.json()).detail || msg; } catch (_) {}
-    $('status').innerHTML = '<span class="dot"></span>BLOCKED';
+    $('status').innerHTML = '<span class="dot"></span>' + T('status.blocked');
     $('stageMsg').textContent = msg; $('stageMsg').hidden = false;
     $('caseSub').textContent = msg;
     return;
@@ -635,25 +682,25 @@ function handleLive(e) {
       $('log').innerHTML = ''; $('overlays').innerHTML = ''; $('caseFacts').innerHTML = '';
       $('ts').hidden = true; $('stageMsg').hidden = true;
       $('ndvi').style.color = 'var(--red-t)'; $('bsi').style.color = 'var(--amber)';
-      $('dossierLink').removeAttribute('href'); $('dossierLink').textContent = '▤ dossier';
-      $('clsLabel').textContent = '—'; $('caseTitle').textContent = 'Scanning…';
+      $('dossierLink').removeAttribute('href'); $('dossierLink').textContent = T('file.dossier');
+      $('clsLabel').textContent = '—'; $('caseTitle').textContent = T('stage.scanning');
       $('sevChip').textContent = '—'; $('sevChip').style.color = ''; resetReview();
       $('telemetry').classList.add('pending'); $('sevPanel').classList.add('pending');
-      $('sevScore').textContent = '·'; $('sevTier').textContent = 'analysing…';
+      $('sevScore').textContent = '·'; $('sevTier').textContent = T('stage.loading');
       setBeat(0);
       break;
     case 'start':
       run.title = e.title; run.mode = e.mode; run.windows = e.windows;
       $('caseTitle').textContent = e.title;
-      $('caseSub').textContent = `${e.mode} · S2 ${e.windows.before.slice(0, 4)} → ${e.windows.after.slice(0, 4)} · fetching…`;
+      $('caseSub').textContent = `${e.mode} · S2 ${e.windows.before.slice(0, 4)} → ${e.windows.after.slice(0, 4)}`;
       break;
     case 'imagery':
       $('stageLoading').hidden = true;
       run.images = { before: e.before, after: e.after, grid: e.grid };
       $('imgBefore').src = `runs/${runId}/${e.before}?t=${liveTick}`;
       $('imgAfter').src = `runs/${runId}/${e.after}?t=${liveTick}`;
-      $('beforeTag').textContent = 'BEFORE'; $('afterTag').textContent = 'AFTER';
-      liveLog('• Pulled before/after imagery');
+      $('beforeTag').textContent = T('stage.before'); $('afterTag').textContent = T('stage.after');
+      liveLog(T('trace.imagery'));
       setBeat(1);
       break;
     case 'detect':
@@ -662,38 +709,40 @@ function handleLive(e) {
       $('caseSub').textContent =
         `${run.mode} · ${e.centroid[1].toFixed(3)}°N ${e.centroid[0].toFixed(3)}°E · ` +
         `S2 ${run.windows.before.slice(0, 4)} → ${run.windows.after.slice(0, 4)}`;
-      liveLog(`• Detected ${e.region.area_ha} ha of change`);
+      liveLog(T('trace.detected', { area: e.region.area_ha }));
       setBeat(2);
       $('telemetry').classList.remove('pending');
       break;
     case 'classify':
       run.classification = e.classification;
-      $('clsLabel').textContent = e.classification.label.replaceAll('_', ' ');
-      liveLog(`• Classified: ${e.classification.label.replaceAll('_', ' ')} (${e.classification.source}${e.classification.confidence != null ? ', conf ' + e.classification.confidence : ''})`);
+      $('clsLabel').textContent = tCls(e.classification.label);
+      liveLog(T('trace.classified', { label: tCls(e.classification.label), source: e.classification.source,
+        conf: e.classification.confidence != null ? ', conf ' + e.classification.confidence : '' }));
       if (e.second_opinion) {
-        const v = { confirm: 'confirmed', downgrade: 'downgraded', reject: 'flagged likely-false' }[e.second_opinion.verdict] || e.second_opinion.verdict;
-        liveLog(`• Second opinion: ${v}`, e.second_opinion.verdict !== 'confirm');
+        liveLog(T('trace.second', { verdict: T('verdict.' + e.second_opinion.verdict) || e.second_opinion.verdict }),
+          e.second_opinion.verdict !== 'confirm');
       }
       setBeat(3);
       break;
     case 'legality':
       run.flags = e.flags; run.severity = e.severity; run.overlays = e.overlays;
       buildOverlays(); renderSeverity();
-      liveLog(e.flags.length ? `• Legality: ${e.flags.length} rule${e.flags.length > 1 ? 's' : ''} flagged` : '• Legality: no rule triggered', e.flags.length > 0);
+      liveLog(e.flags.length ? T('trace.legality.flagged', { n: e.flags.length, s: e.flags.length > 1 ? 's' : '' })
+        : T('trace.legality.none'), e.flags.length > 0);
       setBeat(4);
       break;
     case 'dossier':
       run.dossier = e.dossier;
       $('dossierLink').href = `runs/${runId}/${e.dossier}`;
       $('dossierLink').textContent = '▤ ' + e.dossier;
-      liveLog('• Dossier compiled');
+      liveLog(T('trace.dossier'));
       setBeat(5);
       break;
     case 'done':
       $('stageLoading').hidden = true;
       run = e.run; runId = e.run.id;
       renderCaseMeta();
-      liveLog('• Alert drafted — not sent', true);
+      liveLog(T('trace.alert'), true);
       setupTimeseries();
       setBeat(6);
       liveMode = false;
@@ -705,27 +754,27 @@ function handleLive(e) {
       liveMode = false;
       $('stageLoading').hidden = true;
       $('stageMsg').hidden = true;
-      $('status').innerHTML = '<span class="dot"></span>NO CHANGE';
+      $('status').innerHTML = '<span class="dot"></span>' + T('status.nochange');
       $('caseTitle').textContent = run.title || $('caseTitle').textContent;
       $('caseSub').textContent =
-        `${run.mode || 'scan'} · S2 ${(e.windows?.before || '').slice(0, 4)} → ${(e.windows?.after || '').slice(0, 4)} · no significant change`;
-      liveLog('✓ ' + (e.message || 'No significant change detected.'));
+        `${run.mode || 'scan'} · S2 ${(e.windows?.before || '').slice(0, 4)} → ${(e.windows?.after || '').slice(0, 4)} · ${T('nochange.sub')}`;
+      liveLog('✓ ' + (e.message || T('nochange.line')));
       setBeat(1);   // perceive done (imagery shown); stop before reason/act
       break;
     case 'error':
       liveMode = false;
       $('stageLoading').hidden = true;
-      $('stageMsg').textContent = e.message || 'No result for this zone.';
+      $('stageMsg').textContent = e.message || T('nochange.line');
       $('stageMsg').hidden = false;
-      $('status').innerHTML = '<span class="dot"></span>NO CHANGE';
+      $('status').innerHTML = '<span class="dot"></span>' + T('status.nochange');
       liveLog('⚠ ' + e.message, true);
       break;
   }
   // make the live wait legible: show what the agent is doing right now
-  const STEP = { open: 'STARTING…', start: 'FETCHING SENTINEL-2…', imagery: 'DETECTING CHANGE…',
-    detect: 'CLASSIFYING…', classify: 'CHECKING LEGALITY…', legality: 'COMPILING DOSSIER…',
-    dossier: 'DRAFTING ALERT…' };
-  if (liveMode && STEP[e.stage]) liveStatus(STEP[e.stage]);
+  const STEP = { open: 'step.starting', start: 'step.fetching', imagery: 'step.detecting',
+    detect: 'step.classifying', classify: 'step.legality', legality: 'step.dossier',
+    dossier: 'step.alert' };
+  if (liveMode && STEP[e.stage]) liveStatus(T(STEP[e.stage]));
 }
 
 async function refreshManifest() {
@@ -755,12 +804,12 @@ async function loadRun(id) {
   run = await fetch(`runs/${id}/run.json`).then(r => r.json());
   $('imgBefore').src = `runs/${id}/before.png`;
   $('imgAfter').src = `runs/${id}/after.png`;
-  $('beforeTag').textContent = 'BEFORE'; $('afterTag').textContent = 'AFTER';
+  $('beforeTag').textContent = T('stage.before'); $('afterTag').textContent = T('stage.after');
   placeBox();
   buildOverlays();
   $('ndvi').style.color = 'var(--red-t)';
   $('bsi').style.color = 'var(--amber)';
-  $('clsLabel').textContent = run.classification.label.replaceAll('_', ' ');
+  $('clsLabel').textContent = tCls(run.classification.label);
   // telemetry numbers are filled (and counted up) per beat:
   ['ndvi', 'bsi', 'area'].forEach(k => $(k).textContent = '—');
   $('confText').textContent = '—';
@@ -781,20 +830,21 @@ async function loadRun(id) {
 function condenseNarration(r) {
   const cls = r.classification || {};
   const lines = [
-    { text: '• Pulled before/after imagery' },
-    { text: r.region ? `• Detected ${r.region.area_ha} ha of change` : '• No significant change detected' },
+    { text: T('trace.imagery') },
+    { text: r.region ? T('trace.detected', { area: r.region.area_ha }) : T('trace.nochange') },
   ];
   if (cls.label) {
-    lines.push({ text: `• Classified: ${cls.label.replaceAll('_', ' ')} (${cls.source || 'heuristic'}${cls.confidence != null ? ', conf ' + cls.confidence : ''})` });
+    lines.push({ text: T('trace.classified', { label: tCls(cls.label), source: cls.source || 'heuristic',
+      conf: cls.confidence != null ? ', conf ' + cls.confidence : '' }) });
   }
   if (r.second_opinion) {
-    const v = { confirm: 'confirmed', downgrade: 'downgraded', reject: 'flagged likely-false' }[r.second_opinion.verdict] || r.second_opinion.verdict;
-    lines.push({ text: `• Second opinion: ${v}`, flag: r.second_opinion.verdict !== 'confirm' });
+    lines.push({ text: T('trace.second', { verdict: T('verdict.' + r.second_opinion.verdict) || r.second_opinion.verdict }),
+      flag: r.second_opinion.verdict !== 'confirm' });
   }
   const nFlags = (r.flags || []).length;
-  lines.push({ text: nFlags ? `• Legality: ${nFlags} rule${nFlags > 1 ? 's' : ''} flagged` : '• Legality: no rule triggered', flag: nFlags > 0 });
-  lines.push({ text: '• Dossier compiled' });
-  lines.push({ text: '• Alert drafted — not sent', flag: true });
+  lines.push({ text: nFlags ? T('trace.legality.flagged', { n: nFlags, s: nFlags > 1 ? 's' : '' }) : T('trace.legality.none'), flag: nFlags > 0 });
+  lines.push({ text: T('trace.dossier') });
+  lines.push({ text: T('trace.alert'), flag: true });
   return lines;
 }
 
@@ -836,7 +886,7 @@ function setupTimeseries() {
   const ts = run.timeseries, el = $('ts');
   if (!ts || !ts.series || !ts.series.length) { el.hidden = true; return; }
   el.hidden = false;
-  $('tsOnset').textContent = ts.onset ? `Expansion began ${ts.onset}` : 'no clear onset';
+  $('tsOnset').textContent = ts.onset ? T('ts.onset', { year: ts.onset }) : T('ts.noonset');
   const n = ts.series.length, max = Math.max(...ts.series.map(s => s.area_ha), 0.001);
   const pts = ts.series.map((s, i) => `${_tsX(i, n).toFixed(1)},${_tsY(s.area_ha, max).toFixed(1)}`).join(' ');
   const onsetIdx = ts.years.indexOf(ts.onset);
@@ -856,7 +906,7 @@ function setupTimeseries() {
 function scrubYear(ts, idx) {
   const s = ts.series[idx], year = ts.years[idx];
   $('imgAfter').src = `runs/${runId}/${ts.images[String(year)]}`;
-  $('afterTag').textContent = `AFTER · ${year}`;
+  $('afterTag').textContent = `${T('stage.after')} · ${year}`;
   $('tsReadout').textContent = `${year} · ${s.area_ha} ha`;
   const n = ts.series.length, max = Math.max(...ts.series.map(x => x.area_ha), 0.001), mk = $('tsMarker');
   if (mk) { mk.setAttribute('cx', _tsX(idx, n).toFixed(1)); mk.setAttribute('cy', _tsY(s.area_ha, max).toFixed(1)); }
@@ -873,8 +923,8 @@ function setBeat(n) {
   const prev = beat;
   beat = Math.max(0, Math.min(BEATS - 1, n));
   body.dataset.beat = beat;
-  $('status').innerHTML = beat === 0 ? '<span class="dot"></span>READY'
-    : (beat >= BEATS - 1 ? '<span class="dot"></span>COMPLETE' : '<span class="dot"></span>RUNNING');
+  $('status').innerHTML = beat === 0 ? '<span class="dot"></span>' + T('status.ready')
+    : (beat >= BEATS - 1 ? '<span class="dot"></span>' + T('status.complete') : '<span class="dot"></span>' + T('status.running'));
 
   // step rail
   setPhase('perceive', beat >= 1, 'on', prev < 1);

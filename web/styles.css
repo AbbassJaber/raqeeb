@@ -375,3 +375,50 @@ body[data-beat="4"] .overlays,body[data-beat="5"] .overlays,body[data-beat="6"] 
 @keyframes sweep{0%{left:-25%;}100%{left:100%;}}
 @keyframes pulse{0%,100%{box-shadow:0 0 0 1px #d6473f33,0 0 12px #d6473f55;}50%{box-shadow:0 0 0 1px #d6473f66,0 0 22px #d6473faa;}}
 @media (prefers-reduced-motion:reduce){.sweep,.changebox{animation:none;}*{transition:none!important;}}
+
+/* ============================================================================
+   Arabic / RTL. dir="rtl" on <html> mirrors the chrome; the MAP and the
+   before/after STAGE stay LTR (coordinate-based imagery, not text).
+   ============================================================================ */
+[dir="rtl"] body, body.rtl,
+[dir="rtl"] .mono, [dir="rtl"] .log-lines,
+[dir="rtl"] .leaflet-container, [dir="rtl"] .leaflet-control-layers-expanded,
+[dir="rtl"] .chat-suggest .chip, [dir="rtl"] .chat-refs .ref { font-family:'Cairo','Manrope',system-ui,sans-serif; }
+
+/* margin-auto that pushes the controls to the end must follow the writing direction */
+[dir="rtl"] .controls{margin-left:0;margin-right:auto;}
+[dir="rtl"] .aoi{margin-left:0;margin-right:8px;}
+[dir="rtl"] .status .dot{margin-right:0;margin-left:6px;}
+
+/* left-anchored text / accents → logical end/start under RTL */
+[dir="rtl"] .qcard{text-align:right;}
+[dir="rtl"] .qcard .qsev{text-align:left;padding-right:0;padding-left:2px;}
+[dir="rtl"] .qcard .qstripe{left:auto;right:0;}
+[dir="rtl"] .qcard:hover,[dir="rtl"] .qcard.hot{transform:translateX(-3px);}  /* nudge toward the start edge */
+[dir="rtl"] .qcard .qdel{right:auto;left:6px;}
+[dir="rtl"] .reasoning .log-lines{padding-right:0;padding-left:4px;}
+[dir="rtl"] .chat-log{padding-right:0;padding-left:4px;}
+[dir="rtl"] .ts-readout{text-align:left;}
+[dir="rtl"] .rail .sub{padding-left:0;padding-right:2px;}
+[dir="rtl"] .intro-steps{padding-left:0;padding-right:18px;}
+[dir="rtl"] .intro-note{border-left:0;border-right:2px solid var(--amber);padding:2px 11px 2px 0;}
+[dir="rtl"] .evidence{border-left:0;border-right:3px solid var(--accent);}
+[dir="rtl"] .queue-eval{border-left:0;border-right:3px solid var(--primary);}
+[dir="rtl"] .chat-msg.user{align-self:flex-start;}    /* user bubbles to the start edge */
+[dir="rtl"] .chat-refs .ref,[dir="rtl"] .chat-suggest .chip{text-align:right;}
+
+/* the chat drawer slides in from the start edge (left) under RTL */
+[dir="rtl"] .chat{right:auto;left:0;border-left:0;border-right:1px solid var(--line2);transform:translateX(-100%);}
+[dir="rtl"] .chat.open{transform:translateX(0);}
+[dir="rtl"] .chat-fab{right:auto;left:24px;}
+
+/* KEEP LTR — coordinate space must not mirror. The stage holds satellite imagery
+   with a pixel-accurate change box + swipe divider; the map is geographic. */
+[dir="rtl"] .stage,[dir="rtl"] #map,[dir="rtl"] .map-wrap{direction:ltr;}
+[dir="rtl"] .box-lbl{left:0;right:auto;}
+
+/* digits + technical labels read better LTR-embedded even inside Arabic text */
+[dir="rtl"] .case-sub,[dir="rtl"] .legend,[dir="rtl"] .telemetry .row{unicode-bidi:plaintext;}
+
+/* the language toggle reads as a compact pill */
+.lang-toggle{min-width:46px;text-align:center;}

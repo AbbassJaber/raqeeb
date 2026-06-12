@@ -13,6 +13,7 @@ from . import config
 from .models import Finding
 
 _RECIPIENTS = "Municipality / Ministry of Environment / environmental NGO"
+_RECIPIENTS_AR = "البلدية / وزارة البيئة / منظمة بيئية"
 
 
 _ALERT_PROMPT = (
@@ -20,17 +21,33 @@ _ALERT_PROMPT = (
     "satellite-flagged candidate violation. Frame it as requiring verification, not an "
     "accusation, and do not name individuals. Details: {details}"
 )
+# Appended when the operator's UI is in Arabic — keep the alert ready for a local recipient.
+_ALERT_AR = ("\n\nWrite the entire alert in Modern Standard Arabic (العربية الفصحى), suitable "
+             "for a Lebanese municipality. Keep it a candidate requiring verification, never an "
+             "accusation, and do not name individuals.")
 
 
-def draft_alert(finding: Finding) -> str:
+def draft_alert(finding: Finding, locale: str = "en") -> str:
+    ar = str(locale or "en").lower().startswith("ar")
     if not config.OFFLINE:
         try:
             if config.LLM_PROVIDER == "gemini":
-                return _draft_with_gemini(finding)
-            return _draft_with_claude(finding)
+                return _draft_with_gemini(finding, ar)
+            return _draft_with_claude(finding, ar)
         except Exception:
             pass  # fall back to the template
     f = finding
+    if ar:
+        return (
+            f"إلى: {_RECIPIENTS_AR}\n"
+            f"الموضوع: احتمال {f.classification.label.replace('_', ' ')} — {f.nearest_place}\n\n"
+            f"رصد التحليل الفضائي ~{f.region.area_ha} هكتار من التغيّر عند "
+            f"{f.region.centroid[1]:.5f} شمالاً، {f.region.centroid[0]:.5f} شرقاً "
+            f"({f.detected_window}). {('؛ '.join(f.flags)) or 'يُظهر تغيّراً ملحوظاً في الغطاء الأرضي'}. "
+            f"التصنيف: {f.classification.label} ({f.classification.confidence:.2f}).\n\n"
+            f"مرفق ملف أدلّة للتحقق. هذا إشعار مرشّح آلي، وليس مخالفة مؤكّدة.\n\n"
+            f"[مسودّة — يُراجَع قبل الإرسال]"
+        )
     return (
         f"To: {_RECIPIENTS}\n"
         f"Subject: Possible {f.classification.label.replace('_', ' ')} — {f.nearest_place}\n\n"
@@ -44,19 +61,23 @@ def draft_alert(finding: Finding) -> str:
     )
 
 
-def _draft_with_claude(finding: Finding) -> str:  # pragma: no cover
+def _prompt(finding: Finding, ar: bool) -> str:
+    return _ALERT_PROMPT.format(details=finding.to_dict()) + (_ALERT_AR if ar else "")
+
+
+def _draft_with_claude(finding: Finding, ar: bool = False) -> str:  # pragma: no cover
     import anthropic
     client = anthropic.Anthropic()
     msg = client.messages.create(
         model=config.CLAUDE_MODEL, max_tokens=350,
-        messages=[{"role": "user", "content": _ALERT_PROMPT.format(details=finding.to_dict())}],
+        messages=[{"role": "user", "content": _prompt(finding, ar)}],
     )
     return "".join(b.text for b in msg.content if getattr(b, "type", "") == "text")
 
 
-def _draft_with_gemini(finding: Finding) -> str:  # pragma: no cover
+def _draft_with_gemini(finding: Finding, ar: bool = False) -> str:  # pragma: no cover
     from . import llm
-    resp = llm.gemini_generate(contents=_ALERT_PROMPT.format(details=finding.to_dict()))
+    resp = llm.gemini_generate(contents=_prompt(finding, ar))
     return resp.text
 
 

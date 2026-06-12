@@ -66,6 +66,13 @@ SCAN_MAX_KM = 5.0              # reject zones wider than this (≈ 500 px at 10 
 SCAN_GRID_MIN = 96
 SCAN_GRID_MAX = 512
 
+# Reverse-geocoding: name a freshly drawn zone after its real place (OSM Nominatim)
+# instead of the bare coordinates. Best-effort — falls back to coordinates if the
+# lookup is disabled, offline, or returns nothing, so a no-network demo still works.
+GEOCODE = os.getenv("RAQEEB_GEOCODE", "1") != "0"
+NOMINATIM_URL = os.getenv("RAQEEB_NOMINATIM_URL", "https://nominatim.openstreetmap.org/reverse")
+GEOCODE_TIMEOUT_S = float(os.getenv("RAQEEB_GEOCODE_TIMEOUT_S", "4"))
+
 # --- detection thresholds ---------------------------------------------------
 NDVI_DROP_MIN = 0.25           # vegetation loss
 BSI_RISE_MIN = 0.10            # bare-soil / bare-rock / built-up gain

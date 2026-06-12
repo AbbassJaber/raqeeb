@@ -21,7 +21,7 @@ from fastapi.responses import JSONResponse, StreamingResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 
-from raqeeb import config, democache, alert, agent, classify, legality, severity
+from raqeeb import config, democache, alert, agent, classify, geocode, legality, severity
 from raqeeb.models import ChangeRegion, Classification, Finding
 
 WEB = config.ROOT / "web"
@@ -40,6 +40,19 @@ class RunRequest(BaseModel):
     after_window: str = "2025-05-01..2025-09-30"
     grid: int = 256
     title: str | None = None
+    locale: str = "en"                         # "en" | "ar" — language for LLM-written prose
+
+
+# When the UI is in Arabic, ask the LLM to answer in Arabic. Appended to a prompt; the
+# grounding rules and JSON contracts elsewhere stay in English (the model honours both).
+_AR_INSTRUCTION = ("\n\nIMPORTANT: Respond in Modern Standard Arabic (العربية الفصحى). "
+                   "Keep place names and any proper nouns as the user would recognise them. "
+                   "Keep the same grounding rules and never accuse — every site is a candidate "
+                   "for human verification (مرشّح للتحقق البشري).")
+
+
+def _ar(locale) -> bool:
+    return str(locale or "en").lower().startswith("ar")
 
 
 @app.get("/api/health")
@@ -150,7 +163,11 @@ def _scenario(req: RunRequest) -> dict:
         raise HTTPException(422, f"Zone too large (~{side_m / 1000:.1f} km across). Draw "
                                  f"≤ {config.SCAN_MAX_KM:g} km so detection stays at ~{config.PIXEL_M} m/pixel.")
     grid = max(config.SCAN_GRID_MIN, min(config.SCAN_GRID_MAX, round(side_m / config.PIXEL_M)))
-    title = req.title or f"Drawn zone · {cy:.3f}N {cx:.3f}E"
+    # Prefer an explicit client title, then a real place name for the box center,
+    # then bare coordinates — so the dossier/queue read e.g. "Bourj Hammoud, Mount
+    # Lebanon" instead of "Drawn zone · 33.894N 35.539E" when geocoding succeeds.
+    title = (req.title or geocode.reverse_place_name(cx, cy)
+             or f"Drawn zone · {cy:.3f}N {cx:.3f}E")
     return {"id": "live", "title": title, "name": title, "mode": req.mode,
             "bbox": (w, s, e, n), "before_window": req.before_window,
             "after_window": req.after_window, "grid": grid,
@@ -310,6 +327,7 @@ def _stage_from_tool(name, scenario, state, run_dir, emit, region_payload):
 class AlertRequest(BaseModel):
     id: str
     reviewed: bool = False
+    locale: str = "en"         # "en" | "ar" — drafted-alert language
 
 
 def _finding_from_dict(d: dict) -> Finding:
@@ -337,7 +355,7 @@ def prepare_alert(req: AlertRequest):
     if not fpath.exists():
         raise HTTPException(404, f"no finding for case '{req.id}' — run it first")
     finding = _finding_from_dict(json.loads(fpath.read_text()))
-    draft = alert.draft_alert(finding)
+    draft = alert.draft_alert(finding, locale=req.locale)
     try:
         msg = alert.send_to_reviewer(finding, reviewed=req.reviewed, transport="outbox",
                                      draft=draft, out_root=config.OUTPUT_DIR / "outbox")
@@ -349,6 +367,7 @@ def prepare_alert(req: AlertRequest):
 class ChatRequest(BaseModel):
     question: str
     history: list[dict] = []   # prior [{role, text}] turns, for follow-up context
+    locale: str = "en"         # "en" | "ar" — answer language
 
 
 _CHAT_SYS = (
@@ -389,33 +408,57 @@ def _findings_context() -> list[dict]:
     return cases
 
 
-def _brief(question: str, cases: list[dict]) -> tuple[str, list[str]]:
-    """Deterministic grounded answer — the offline path AND the fallback if Gemini fails."""
+# Arabic tier words for the deterministic brief (matches the UI dictionary).
+_AR_TIER = {"critical": "حرجة", "high": "عالية", "medium": "متوسطة", "low": "منخفضة"}
+
+
+def _brief(question: str, cases: list[dict], locale: str = "en") -> tuple[str, list[str]]:
+    """Deterministic grounded answer — the offline path AND the fallback if the LLM fails.
+    Localised to Arabic when locale == 'ar' so the offline demo stays bilingual too."""
     q = question.lower()
+    ar = _ar(locale)
     order = {"critical": 0, "high": 1, "medium": 2, "low": 3, None: 4}
     flagged = sorted((c for c in cases if c["flags"]), key=lambda c: order.get(c["tier"], 4))
-    label = lambda c: f"{c['title']} ({c['tier']} {c['score']})"
-    if any(w in q for w in ("how many", "count", "number")):
+    tier_w = (lambda tr: _AR_TIER.get(tr, tr or "")) if ar else (lambda tr: tr or "")
+    label = lambda c: f"{c['title']} ({tier_w(c['tier'])} {c['score']})"
+    if any(w in q for w in ("how many", "count", "number", "كم", "عدد")):
         by: dict = {}
         for c in cases:
             by[c["tier"]] = by.get(c["tier"], 0) + 1
-        parts = ", ".join(f"{v} {k}" for k, v in by.items() if k)
+        parts = ("، ".join(f"{v} {tier_w(k)}" for k, v in by.items() if k) if ar
+                 else ", ".join(f"{v} {k}" for k, v in by.items() if k))
+        if ar:
+            return (f"{len(cases)} موقعاً مرشّحاً تحت المراقبة — {parts}. {len(flagged)} منها لديه قاعدة "
+                    f"مُشار إليها؛ وكلّها بانتظار المراجعة البشرية.", [c["id"] for c in flagged])
         return (f"{len(cases)} candidate sites under watch — {parts}. {len(flagged)} have a rule "
                 f"flagged; all are pending human review.", [c["id"] for c in flagged])
-    if any(w in q for w in ("coast", "sea", "beirut", "setback", "shore", "landfill")):
+    if any(w in q for w in ("coast", "sea", "beirut", "setback", "shore", "landfill",
+                            "ساحل", "بحر", "بيروت", "شاطئ")):
         coastal = [c for c in flagged if c["mode"] == "coastal"]
         if coastal:
+            if ar:
+                return ("مرشّحون ساحليون مُشار إليهم ضمن الأملاك العامة البحرية: "
+                        + "؛ ".join(label(c) for c in coastal)
+                        + ". مرشّحون للتحقق البشري، وليسوا اتهامات.", [c["id"] for c in coastal])
             return ("Coastal candidates flagged for the public-domain setback: "
                     + "; ".join(label(c) for c in coastal)
                     + ". Candidates for human verification, not accusations.",
                     [c["id"] for c in coastal])
     if flagged:
         top = flagged[0]
+        if ar:
+            return (f"{len(flagged)} مرشّح(ون) بحاجة إلى مراجعة — الأعلى هو {top['title']} "
+                    f"({tier_w(top['tier'])} {top['score']}: {'، '.join(top['flags'])}). الكل: "
+                    + "؛ ".join(label(c) for c in flagged)
+                    + ". كل حالة مرشّح للتحقق البشري؛ والتنبيهات تُصاغ ولا تُرسَل تلقائياً.",
+                    [c["id"] for c in flagged])
         return (f"{len(flagged)} candidate(s) need review — highest is {top['title']} "
                 f"({top['tier']} {top['score']}: {', '.join(top['flags'])}). All: "
                 + "; ".join(label(c) for c in flagged)
                 + ". Each is a candidate for human verification; alerts are drafted, never auto-sent.",
                 [c["id"] for c in flagged])
+    if ar:
+        return (f"{len(cases)} موقعاً تحت المراقبة؛ لا توجد حالات مُشار إليها حالياً.", [])
     return (f"{len(cases)} sites under watch; none currently flagged.", [])
 
 
@@ -430,13 +473,14 @@ def _infer_refs(answer: str, cases: list[dict]) -> list[str]:
     return refs
 
 
-def _chat_answer(question: str, cases: list[dict], history: list[dict] | None = None) -> tuple[str, list[str]]:
+def _chat_answer(question: str, cases: list[dict], history: list[dict] | None = None,
+                 locale: str = "en") -> tuple[str, list[str]]:
     if config.OFFLINE or config.LLM_PROVIDER not in ("gemini", "claude"):
-        return _brief(question, cases)
+        return _brief(question, cases, locale)
     try:
         from raqeeb import llm
-        convo = "".join(f"{t.get('role', 'user')}: {t.get('text', '')}\n" for t in (history or [])[-6:])
-        prompt = (f"{_CHAT_SYS}\n\nFINDINGS (JSON):\n{json.dumps(cases)}\n\n"
+        convo = "".join(f"{m.get('role', 'user')}: {m.get('text', '')}\n" for m in (history or [])[-6:])
+        prompt = (f"{_CHAT_SYS}{_AR_INSTRUCTION if _ar(locale) else ''}\n\nFINDINGS (JSON):\n{json.dumps(cases)}\n\n"
                   + (f"CONVERSATION SO FAR:\n{convo}\n" if convo else "")
                   + f"USER: {question}\nRAQEEB:")
         gen = llm.claude_generate if config.LLM_PROVIDER == "claude" else llm.gemini_generate
@@ -445,7 +489,7 @@ def _chat_answer(question: str, cases: list[dict], history: list[dict] | None = 
             return answer, _infer_refs(answer, cases)
     except Exception:  # LLM unavailable/rate-limited → deterministic grounded brief
         pass
-    return _brief(question, cases)
+    return _brief(question, cases, locale)
 
 
 # --- natural-language scan: "scan the coast north of Tripoli" -> a runnable AOI ---
@@ -515,15 +559,19 @@ def _scan_scenario(question: str) -> dict | None:
 def chat(req: ChatRequest):
     """Executive Q&A grounded in the findings; an NL 'scan …' request returns a runnable AOI."""
     q = req.question.strip()
+    ar = _ar(req.locale)
     if _is_scan(q):
         sc = _scan_scenario(q)
         if sc:
             place = sc["title"].replace(" (scan)", "")
-            return {"answer": f"Scanning {place} on live Sentinel-2 — running the agent now.",
-                    "cases": [], "action": {"type": "scan", "scenario": sc}}
-        return {"answer": "I couldn't pin that to a location in Lebanon — try naming a town or "
-                          "a stretch of coast (e.g. 'scan the coast at Chekka').", "cases": []}
-    answer, refs = _chat_answer(q, _findings_context(), req.history)
+            msg = (f"جارٍ مسح {place} على صور سنتينل-2 المباشرة — يعمل الوكيل الآن." if ar
+                   else f"Scanning {place} on live Sentinel-2 — running the agent now.")
+            return {"answer": msg, "cases": [], "action": {"type": "scan", "scenario": sc}}
+        msg = ("تعذّر تحديد موقع في لبنان — جرّب تسمية بلدة أو امتداد ساحلي (مثل: «امسح الساحل عند شكا»)."
+               if ar else "I couldn't pin that to a location in Lebanon — try naming a town or "
+                          "a stretch of coast (e.g. 'scan the coast at Chekka').")
+        return {"answer": msg, "cases": []}
+    answer, refs = _chat_answer(q, _findings_context(), req.history, req.locale)
     return {"answer": answer, "cases": refs}
 
 
